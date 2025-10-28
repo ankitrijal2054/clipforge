@@ -36,6 +36,13 @@ export function useRecording(options: UseRecordingOptions = {}) {
   const [qualitySettings, setQualitySettings] = useState<Record<string, RecordingQuality>>({})
   const [cameraPermission, setCameraPermission] = useState(false)
   const [microphonePermission, setMicrophonePermission] = useState(false)
+  const [pipPosition, setPipPosition] = useState<
+    'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
+  >('bottom-right')
+  const [pipSize, setPipSize] = useState<{ width: number; height: number }>({
+    width: 320,
+    height: 180
+  })
 
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const unsubscribeRef = useRef<(() => void) | null>(null)
@@ -331,6 +338,8 @@ export function useRecording(options: UseRecordingOptions = {}) {
     qualitySettings,
     cameraPermission,
     microphonePermission,
+    pipPosition,
+    pipSize,
 
     // Actions
     startRecording,
@@ -348,6 +357,8 @@ export function useRecording(options: UseRecordingOptions = {}) {
     loadScreenSources,
     loadWebcamDevices,
     loadAudioDevices,
-    checkPermissions
+    checkPermissions,
+    setPipPosition,
+    setPipSize
   }
 }
