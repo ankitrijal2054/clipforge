@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-ClipForge follows a modern Electron application architecture with clear separation of concerns, optimized for desktop video editing workflows.
+ClipForge follows a modern Electron application architecture with clear separation of concerns, optimized for desktop video editing workflows. Phase 2 extends this architecture to support multi-clip editing and native recording capabilities.
 
 ## Core Architecture Patterns
 
@@ -11,15 +11,27 @@ ClipForge follows a modern Electron application architecture with clear separati
 ```
 Main Process (Node.js)
 ├── FFmpeg Integration
+├── Recording System (Phase 2)
+│   ├── Screen Recorder
+│   ├── Media Recorder
+│   └── Recording Manager
 ├── File System Operations
 ├── IPC Handlers
+│   ├── Video Handlers
+│   └── Recording Handlers (Phase 2)
 └── Build Configuration
 
 Renderer Process (React)
 ├── UI Components
-├── State Management
+│   ├── MVP Components
+│   └── Phase 2 Components
+│       ├── RecordingPanel
+│       ├── MultiClipTimeline
+│       └── TimelineClip
+├── State Management (Extended)
 ├── User Interactions
-└── Video Playback
+├── Video Playback
+└── Recording UI (Phase 2)
 
 Preload Scripts
 ├── Secure IPC Bridge
@@ -476,6 +488,180 @@ const validateVideoFile = (file: File): boolean => {
 }
 ```
 
+## Phase 2 Architecture Patterns
+
+### 1. **Recording System Pattern**
+
+```typescript
+// Recording state management
+interface RecordingState {
+  isRecording: boolean
+  recordingType: 'screen' | 'webcam' | 'pip' | null
+  recordingDuration: number
+  recordingPath: string | null
+  audioInputs: MediaDeviceInfo[]
+  selectedAudioInput: string | null
+}
+
+// Recording workflow
+const startRecording = async (type: RecordingType, options: RecordingOptions) => {
+  // 1. Get media streams (screen/webcam)
+  const stream = await getMediaStream(type, options)
+
+  // 2. Create MediaRecorder with proper settings
+  const recorder = new MediaRecorder(stream, {
+    mimeType: 'video/webm;codecs=vp9',
+    videoBitsPerSecond: getBitrate(options.quality)
+  })
+
+  // 3. Handle recording events
+  recorder.ondataavailable = handleDataAvailable
+  recorder.onstop = handleRecordingStop
+
+  // 4. Start recording and update state
+  recorder.start()
+  setRecordingState({ isRecording: true, recordingType: type })
+}
+```
+
+### 2. **Multi-Clip Timeline Pattern**
+
+```typescript
+// Timeline state management
+interface TimelineState {
+  timelineClips: TimelineClip[]
+  tracks: Track[]
+  selectedTimelineClips: string[]
+  snapToGrid: boolean
+}
+
+// Drag and drop with @dnd-kit
+const handleDragEnd = (event: DragEndEvent) => {
+  const { active, over } = event
+
+  if (over) {
+    const clipId = active.id as string
+    const newTrackId = over.id as string
+    const newPosition = calculatePositionFromMouse(event)
+
+    // Update clip position and track
+    moveClip(clipId, newPosition, newTrackId)
+  }
+}
+
+// Collision detection for same track
+const handleClipMove = (clipId: string, newPosition: number, trackId: string) => {
+  const clipsOnTrack = timelineClips.filter((c) => c.trackId === trackId && c.id !== clipId)
+
+  // Check for collisions and push adjacent clips
+  const collision = clipsOnTrack.find(
+    (c) => newPosition < c.position + c.duration && newPosition + clip.duration > c.position
+  )
+
+  if (collision) {
+    const overlap = newPosition + clip.duration - collision.position
+    moveClip(collision.id, collision.position + overlap)
+  }
+}
+```
+
+### 3. **Multi-Clip Playback Pattern**
+
+```typescript
+// Sequential clip playback
+const useMultiClipPlayback = () => {
+  const [currentClipIndex, setCurrentClipIndex] = useState(0)
+  const { timelineClips, playhead, isPlaying } = useEditorStore()
+
+  // Sort clips by position
+  const sortedClips = useMemo(
+    () => [...timelineClips].sort((a, b) => a.position - b.position),
+    [timelineClips]
+  )
+
+  // Find active clip at playhead
+  useEffect(() => {
+    const activeClip = sortedClips.find(
+      (clip) => playhead >= clip.position && playhead < clip.position + clip.duration
+    )
+
+    if (activeClip) {
+      const clipIndex = sortedClips.indexOf(activeClip)
+      if (clipIndex !== currentClipIndex) {
+        setCurrentClipIndex(clipIndex)
+        loadClip(activeClip)
+      }
+    }
+  }, [playhead, sortedClips])
+
+  // Handle clip transitions
+  const handleTimeUpdate = () => {
+    const currentClip = sortedClips[currentClipIndex]
+    const videoTime = videoRef.current.currentTime
+
+    // Update global playhead
+    const globalTime = currentClip.position + (videoTime - currentClip.trimStart)
+    setPlayhead(globalTime)
+
+    // Check if reached trim end
+    if (videoTime >= currentClip.trimEnd) {
+      if (currentClipIndex < sortedClips.length - 1) {
+        setCurrentClipIndex(currentClipIndex + 1)
+        loadClip(sortedClips[currentClipIndex + 1])
+      } else {
+        pause() // End of timeline
+      }
+    }
+  }
+}
+```
+
+### 4. **Multi-Clip Export Pattern**
+
+```typescript
+// FFmpeg concat export
+const exportTimeline = async (params: MultiClipExportParams): Promise<string> => {
+  const { timelineClips, outputPath, format, quality } = params
+
+  // Sort clips by position
+  const sortedClips = [...timelineClips].sort((a, b) => a.position - b.position)
+
+  // Step 1: Extract trimmed segments
+  const tempSegments: string[] = []
+  for (const clip of sortedClips) {
+    const sourceClip = getSourceClip(clip.sourceClipId)
+    const tempPath = `${tempDir}/clipforge/segment_${clip.id}.mp4`
+
+    await ffmpeg([
+      '-i',
+      sourceClip.path,
+      '-ss',
+      clip.trimStart.toString(),
+      '-to',
+      clip.trimEnd.toString(),
+      '-c',
+      'copy',
+      tempPath
+    ])
+
+    tempSegments.push(tempPath)
+  }
+
+  // Step 2: Generate concat file
+  const concatContent = tempSegments.map((path) => `file '${path}'`).join('\n')
+  const concatFilePath = `${tempDir}/clipforge/concat_${Date.now()}.txt`
+  await fs.writeFile(concatFilePath, concatContent)
+
+  // Step 3: Concatenate segments
+  await ffmpeg(['-f', 'concat', '-safe', '0', '-i', concatFilePath, '-c', 'copy', outputPath])
+
+  // Cleanup temp files
+  await Promise.all([...tempSegments.map((p) => fs.unlink(p)), fs.unlink(concatFilePath)])
+
+  return outputPath
+}
+```
+
 ## Key Design Principles
 
 1. **Separation of Concerns**: Clear boundaries between main/renderer processes
@@ -485,3 +671,6 @@ const validateVideoFile = (file: File): boolean => {
 5. **Cross-Platform**: Consistent experience across all platforms
 6. **Security**: Context isolation and input validation
 7. **Maintainability**: Clear patterns and comprehensive documentation
+8. **Recording Integration**: Seamless recording-to-timeline workflow
+9. **Multi-Clip Support**: Efficient timeline management and playback
+10. **Scalable Architecture**: Extensible patterns for future enhancements

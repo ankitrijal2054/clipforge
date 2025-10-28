@@ -22,6 +22,16 @@
 - **React Hooks**: Custom hooks for feature-specific state management
 - **Local Storage**: Persistent state with automatic serialization
 
+### **Phase 2 Technologies**
+
+- **@dnd-kit/core**: 6.1.0 - Modern drag-and-drop library for timeline functionality
+- **@dnd-kit/sortable**: 8.0.0 - Sortable lists and timeline clip management
+- **@dnd-kit/utilities**: 3.2.2 - Drag-and-drop utilities and helpers
+- **MediaRecorder API**: Native browser API for screen and webcam recording
+- **desktopCapturer**: Electron API for screen and window capture
+- **Web Audio API**: Audio mixing and track management
+- **Canvas API**: Picture-in-Picture recording composition
+
 ### **Video Processing**
 
 - **FFmpeg**: Cross-platform video processing engine
