@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Download, FolderOpen, CheckCircle, AlertCircle } from 'lucide-react'
 import { useEditorStore } from '../stores/editorStore'
@@ -33,18 +33,10 @@ type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
  * - All inputs: full width, responsive padding
  * - Buttons: touch-friendly (min-h-10)
  */
-export function ExportModal() {
+export function ExportModal(): JSX.Element | null {
   // Store state
-  const {
-    selectedClip,
-    trimStart,
-    trimEnd,
-    isExporting,
-    exportProgress,
-    activeModal,
-    setActiveModal,
-    startExport
-  } = useEditorStore()
+  const { selectedClip, isExporting, exportProgress, activeModal, setActiveModal } =
+    useEditorStore()
 
   // Local modal state
   const [filename, setFilename] = useState('clip_trimmed.mp4')
@@ -72,9 +64,9 @@ export function ExportModal() {
   /**
    * Handle browse button click - open file picker
    */
-  const handleBrowse = async () => {
+  const handleBrowse = async (): Promise<void> => {
     try {
-      const selectedPath = await window.electronAPI.selectExportPath(filename)
+      const selectedPath = await (window.electronAPI as any).selectExportPath(filename)
       if (selectedPath) {
         setExportPath(selectedPath)
         setErrorMessage('')
@@ -87,7 +79,7 @@ export function ExportModal() {
   /**
    * Handle export button click - validate and start export
    */
-  const handleExport = async () => {
+  const handleExport = async (): Promise<void> => {
     // Validation
     if (!filename.trim()) {
       setErrorMessage('Please enter a filename')
@@ -120,7 +112,7 @@ export function ExportModal() {
       const trimmedDuration = state.trimEnd - state.trimStart
 
       // Call the actual FFmpeg export via IPC with the selected output path
-      await window.api.trimExport({
+      await (window.api as any).trimExport({
         inputPath: selectedClip.path,
         startTime: state.trimStart,
         endTime: state.trimEnd,
@@ -143,10 +135,10 @@ export function ExportModal() {
   /**
    * Handle open folder button click
    */
-  const handleOpenFolder = async () => {
+  const handleOpenFolder = async (): Promise<void> => {
     try {
       const folderPath = exportPath.substring(0, exportPath.lastIndexOf('/'))
-      await window.electronAPI.openFolder(folderPath)
+      await (window.electronAPI as any).openFolder(folderPath)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Failed to open folder')
     }
@@ -155,7 +147,7 @@ export function ExportModal() {
   /**
    * Handle close button or modal dismiss
    */
-  const handleClose = () => {
+  const handleClose = (): void => {
     setActiveModal(null)
     // Reset local state
     setExportStatus('idle')
@@ -208,7 +200,7 @@ export function ExportModal() {
                 onChange={(e) => setFilename(e.target.value)}
                 placeholder="clip_trimmed.mp4"
                 disabled={isExporting}
-                className="w-full"
+                className="w-full bg-gray-800 text-white border-gray-600 placeholder-gray-400"
               />
             </div>
 
@@ -222,13 +214,13 @@ export function ExportModal() {
                   onChange={(e) => setExportPath(e.target.value)}
                   placeholder="Choose export location"
                   disabled={isExporting}
-                  className="flex-1"
+                  className="flex-1 bg-gray-800 text-white border-gray-600 placeholder-gray-400"
                 />
                 <Button
                   onClick={handleBrowse}
                   disabled={isExporting}
                   variant="outline"
-                  className="px-4 py-2 min-h-10"
+                  className="px-4 py-2 min-h-10 bg-gray-800 text-white border-gray-600 hover:bg-gray-700"
                 >
                   Browse
                 </Button>
