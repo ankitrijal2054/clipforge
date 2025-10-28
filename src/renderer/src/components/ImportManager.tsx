@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Upload, FileVideo, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, FileVideo, Loader2 } from 'lucide-react'
 import { useEditorStore } from '../../../stores/editorStore'
 import { isValidVideoFile } from '../../../utils/validators'
 import { VideoClip } from '../../../types/video'
@@ -121,16 +121,14 @@ export function ImportManager() {
   }, [])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">Import Video</h3>
-        <div className="text-sm text-gray-400">
-          {isImporting ? 'Processing...' : 'Ready to import'}
-        </div>
+        <h3 className="text-sm font-semibold text-white">Import</h3>
+        <div className="text-xs text-gray-400">{isImporting ? 'Processing...' : ''}</div>
       </div>
 
       <motion.div
-        className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-600 rounded-xl bg-gray-800/30 hover:bg-gray-800/50 transition-all duration-200"
+        className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-gray-600 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-all duration-200"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -143,41 +141,31 @@ export function ImportManager() {
         <motion.div
           animate={{ scale: isDragOver ? 1.1 : 1 }}
           transition={{ duration: 0.2 }}
-          className="mb-6"
+          className="mb-2"
         >
           {isImporting ? (
-            <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+              <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
             </div>
           ) : (
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-2xl flex items-center justify-center">
-              <Upload className="w-8 h-8 text-blue-400" />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-lg flex items-center justify-center">
+              <Upload className="w-5 h-5 text-blue-400" />
             </div>
           )}
         </motion.div>
 
-        <h4 className="text-lg font-semibold text-white mb-2">
-          {isImporting ? 'Importing Video...' : 'Drop your video here'}
+        <h4 className="text-xs font-semibold text-white mb-1 text-center">
+          {isImporting ? 'Importing...' : 'Drop video or'}
         </h4>
-
-        <p className="text-gray-400 text-center mb-6 max-w-sm leading-relaxed">
-          {isImporting
-            ? 'Please wait while we process your video file...'
-            : 'Drag and drop a video file or click the button below to browse your files'}
-        </p>
 
         <button
           onClick={handleFilePicker}
           disabled={isImporting}
-          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
+          className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-1"
         >
-          <FileVideo className="w-4 h-4" />
-          {isImporting ? 'Importing...' : 'Browse Files'}
+          <FileVideo className="w-3 h-3" />
+          {isImporting ? 'Importing...' : 'Browse'}
         </button>
-
-        <div className="mt-4 text-xs text-gray-500 text-center">
-          Supported formats: MP4, MOV, WebM, AVI, MKV
-        </div>
       </motion.div>
     </div>
   )

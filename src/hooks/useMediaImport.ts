@@ -92,7 +92,12 @@ export function useMediaImport() {
       }
 
       try {
-        await importVideoFile(videoFile.path)
+        // For drag and drop, we need to use the file dialog to get the path
+        // since File objects don't have a path property
+        const filePath = await window.api.selectVideoFile()
+        if (filePath) {
+          await importVideoFile(filePath)
+        }
       } catch (error) {
         // Error is already handled in importVideoFile
       }

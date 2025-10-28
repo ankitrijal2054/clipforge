@@ -34,7 +34,7 @@ export function useKeyboardShortcuts() {
     trimStart,
     trimEnd,
     volume,
-    isMuted
+    isMuted: _isMuted
   } = useEditorStore()
 
   // Play/Pause toggle

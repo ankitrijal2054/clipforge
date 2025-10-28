@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { EditorStore } from '../types/store'
-import { VideoClip, TimelineClip, ExportSettings } from '../types/video'
+import { VideoClip, ExportSettings } from '../types/video'
 import { createPersistenceStorage } from './persistence'
 
 /**
@@ -178,28 +178,32 @@ export const useEditorStore = create<EditorStore>()(
           set({ isExporting: true, exportProgress: 0 })
 
           try {
-            // This will be implemented when we integrate with the IPC handlers
-            // For now, we'll simulate the export process
-            const exportParams = {
-              inputPath: state.selectedClip.path,
+            // Get the output path from the export modal (will be passed separately)
+            // For now, construct it from the selected clip
+            const videoMetadata = state.selectedClip
+            const trimmedDuration = state.trimEnd - state.trimStart
+
+            // Call the FFmpeg export via IPC
+            await window.api.trimExport({
+              inputPath: videoMetadata.path,
               startTime: state.trimStart,
               endTime: state.trimEnd,
-              outputPath: '', // Will be set by the export modal
-              duration: state.trimEnd - state.trimStart
-            }
+              outputPath: '', // This needs to be passed from the modal
+              duration: trimmedDuration
+            })
 
-            // Simulate progress updates
-            for (let i = 0; i <= 100; i += 10) {
-              await new Promise((resolve) => setTimeout(resolve, 100))
-              set({ exportProgress: i })
-            }
-
+            // On success, set progress to 100
             set({ isExporting: false, exportProgress: 100 })
           } catch (error) {
             set({ isExporting: false, exportProgress: 0 })
             throw error
           }
         },
+
+        setExportSettings: (settings: Partial<ExportSettings>) =>
+          set((state) => ({
+            exportSettings: { ...state.exportSettings, ...settings }
+          })),
 
         // UI actions
         setActiveModal: (modal: string | null) => set({ activeModal: modal }),
@@ -211,7 +215,7 @@ export const useEditorStore = create<EditorStore>()(
       }),
       {
         name: 'clipforge-editor-store',
-        storage: createPersistenceStorage(),
+        storage: createPersistenceStorage() as any,
         partialize: (state) => ({
           importHistory: state.importHistory,
           exportSettings: state.exportSettings,
@@ -346,8 +350,9 @@ export const useTimelineActions = () => {
 
 export const useExportActions = () => {
   const startExport = useEditorStore((state) => state.startExport)
+  const setExportSettings = useEditorStore((state) => state.setExportSettings)
 
-  return { startExport }
+  return { startExport, setExportSettings }
 }
 
 export const useUIActions = () => {

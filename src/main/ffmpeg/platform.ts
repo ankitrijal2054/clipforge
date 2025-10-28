@@ -47,9 +47,9 @@ export function getFFmpegPath(): string {
   if (isDev) {
     resourcesPath = path.join(__dirname, '../../resources/ffmpeg')
   } else {
-    // In production, use process.resourcesPath if available, otherwise fallback to development path
+    // In production, FFmpeg binaries are in app.asar.unpacked/resources/ffmpeg/
     resourcesPath = process.resourcesPath
-      ? path.join(process.resourcesPath, 'ffmpeg')
+      ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'ffmpeg')
       : path.join(__dirname, '../../resources/ffmpeg')
   }
 
@@ -67,9 +67,9 @@ export function getFFprobePath(): string {
   if (isDev) {
     resourcesPath = path.join(__dirname, '../../resources/ffmpeg')
   } else {
-    // In production, use process.resourcesPath if available, otherwise fallback to development path
+    // In production, FFmpeg binaries are in app.asar.unpacked/resources/ffmpeg/
     resourcesPath = process.resourcesPath
-      ? path.join(process.resourcesPath, 'ffmpeg')
+      ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'ffmpeg')
       : path.join(__dirname, '../../resources/ffmpeg')
   }
 

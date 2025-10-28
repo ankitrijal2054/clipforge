@@ -49,6 +49,14 @@ const api = {
     ipcRenderer.invoke('dialog:openFolder', folderPath)
 }
 
+// Combine electronAPI with custom export APIs for ExportModal
+const combinedAPI = {
+  ...api,
+  // These are the same, but expose them for ExportModal
+  selectExportPath: api.selectExportPath,
+  openFolder: api.openFolder
+}
+
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
@@ -56,6 +64,7 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('electronAPI', combinedAPI)
   } catch (error) {
     console.error(error)
   }
@@ -64,4 +73,6 @@ if (process.contextIsolated) {
   window.electron = electronAPI
   // @ts-ignore (define in dts)
   window.api = api
+  // @ts-ignore (define in dts)
+  window.electronAPI = combinedAPI
 }

@@ -57,4 +57,5 @@ export interface EditorStore {
   setActiveModal: (modal: string | null) => void
   toggleSidebar: () => void
   setIsDragging: (isDragging: boolean) => void
+  setExportSettings: (settings: Partial<ExportSettings>) => void
 }

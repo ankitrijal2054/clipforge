@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Play,
@@ -64,7 +64,7 @@ export function PreviewPlayer() {
   } = useEditorStore()
 
   // Use video player hook (provides the videoRef wired with playback logic)
-  const { videoRef, seekTo, skip, isReady } = useVideoPlayer()
+  const { videoRef, seekTo, skip } = useVideoPlayer()
 
   // Use keyboard shortcuts
   useKeyboardShortcuts()
@@ -140,6 +140,7 @@ export function PreviewPlayer() {
     } else {
       setShowControls(true)
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+      return undefined
     }
   }, [isFullscreen])
 
@@ -169,11 +170,11 @@ export function PreviewPlayer() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 h-full flex flex-col">
       {/* Video Preview Area */}
       <div
         ref={containerRef}
-        className={`relative bg-black overflow-hidden group shadow-2xl ${
+        className={`relative bg-black overflow-hidden group shadow-2xl flex-1 ${
           isFullscreen ? 'rounded-none' : 'rounded-xl'
         }`}
         style={isFullscreen ? { width: '100vw', height: '100vh' } : undefined}
@@ -189,7 +190,7 @@ export function PreviewPlayer() {
         <video
           ref={videoRef}
           src={getVideoSrc(selectedClip.path)}
-          className={isFullscreen ? 'w-full h-full object-contain' : 'w-full h-80 object-contain'}
+          className={isFullscreen ? 'w-full h-full object-contain' : 'w-full h-full object-contain'}
           onLoadedMetadata={() => {
             if (videoRef.current) {
               setPlayhead(0)
@@ -378,28 +379,15 @@ export function PreviewPlayer() {
         </motion.div>
       </div>
 
-      {/* Video Info Panel */}
-      <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-white">Video Preview</h3>
-          <div className="flex items-center space-x-4 text-sm text-gray-400">
-            <span>{formatResolution(selectedClip.width, selectedClip.height)}</span>
-            <span>{formatFileSize(selectedClip.fileSize)}</span>
+      {/* Video Info Panel - Compact */}
+      <div className="bg-gray-800 rounded-lg p-3 border border-gray-700 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-400">
+            {formatResolution(selectedClip.width, selectedClip.height)} •{' '}
+            {formatFileSize(selectedClip.fileSize)} • {formatDuration(selectedClip.duration)}
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-gray-400">Duration:</span>
-            <span className="text-white ml-2 font-medium">
-              {formatDuration(selectedClip.duration)}
-            </span>
-          </div>
-          <div>
-            <span className="text-gray-400">Trim Range:</span>
-            <span className="text-white ml-2 font-medium">
-              {formatDuration(trimStart)} - {formatDuration(trimEnd)}
-            </span>
+          <div className="text-xs text-gray-500">
+            Trim: {formatDuration(trimStart)} - {formatDuration(trimEnd)}
           </div>
         </div>
       </div>

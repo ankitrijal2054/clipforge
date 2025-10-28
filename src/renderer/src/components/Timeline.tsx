@@ -88,6 +88,20 @@ export function Timeline() {
     return Math.max(containerWidth, duration * pixelsPerSecond)
   }, [duration, pixelsPerSecond, containerWidth])
 
+  // UI constants and clamped pixel helpers to ensure endpoints remain visible
+  const HANDLE_WIDTH_PX = 2
+  const HANDLE_RIGHT_PADDING_PX = 8
+  const PLAYHEAD_WIDTH_PX = 1
+  const safeRightForHandlePx = Math.max(
+    0,
+    totalTimelineWidth - (HANDLE_WIDTH_PX + HANDLE_RIGHT_PADDING_PX)
+  )
+  const trimStartPx = trimStart * pixelsPerSecond
+  const trimEndPxRaw = trimEnd * pixelsPerSecond
+  const trimEndPxClamped = Math.min(trimEndPxRaw, safeRightForHandlePx)
+  const playheadPxRaw = playhead * pixelsPerSecond
+  const playheadPxClamped = Math.min(playheadPxRaw, totalTimelineWidth - (PLAYHEAD_WIDTH_PX + 1))
+
   // Generate time markers based on duration and zoom level
   const timeMarkers = useMemo((): TimeMarker[] => {
     if (duration === 0) return []
@@ -392,8 +406,14 @@ export function Timeline() {
             <div
               className="absolute top-8 h-12 bg-blue-500 bg-opacity-40 border-l-2 border-r-2 border-blue-400"
               style={{
-                left: `${trimStart * pixelsPerSecond}px`,
-                width: `${(trimEnd - trimStart) * pixelsPerSecond}px`
+                left: `${trimStartPx}px`,
+                width: `${Math.max(
+                  0,
+                  Math.min(
+                    (trimEnd - trimStart) * pixelsPerSecond,
+                    totalTimelineWidth - trimStartPx
+                  )
+                )}px`
               }}
             />
 
@@ -434,7 +454,7 @@ export function Timeline() {
             <motion.div
               className="absolute top-8 h-12 w-2 bg-blue-400 cursor-ew-resize hover:bg-blue-300 transition-colors"
               style={{
-                left: `${trimEnd * pixelsPerSecond}px`
+                left: `${trimEndPxClamped}px`
               }}
               onMouseDown={handleTrimHandleMouseDown('end')}
               animate={{
@@ -447,7 +467,7 @@ export function Timeline() {
             <motion.div
               className="absolute top-0 h-full w-1 bg-red-500 cursor-grab active:cursor-grabbing"
               style={{
-                left: `${playhead * pixelsPerSecond}px`
+                left: `${playheadPxClamped}px`
               }}
               onMouseDown={handlePlayheadMouseDown}
               whileHover={{ scaleX: 1.5, backgroundColor: '#ff6b6b' }}
@@ -461,7 +481,7 @@ export function Timeline() {
             <div
               className="absolute top-0 text-xs text-white bg-gray-900 px-2 py-1 rounded border border-gray-700 pointer-events-none"
               style={{
-                left: `${playhead * pixelsPerSecond}px`,
+                left: `${playheadPxClamped}px`,
                 transform: 'translateX(-50%)',
                 marginTop: '-28px'
               }}

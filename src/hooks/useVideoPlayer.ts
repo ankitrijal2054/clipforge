@@ -24,7 +24,7 @@ export function useVideoPlayer() {
     isMuted,
     trimStart,
     trimEnd,
-    duration,
+    duration: _duration,
     setPlayhead,
     togglePlayback
   } = useEditorStore()

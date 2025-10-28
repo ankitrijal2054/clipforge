@@ -17,7 +17,7 @@ const PERSISTED_KEYS = [
   'isMuted'
 ] as const
 
-type PersistedState = Pick<import('./editorStore').EditorStore, (typeof PERSISTED_KEYS)[number]>
+type PersistedState = Pick<import('../types/store').EditorStore, (typeof PERSISTED_KEYS)[number]>
 
 /**
  * Custom storage implementation for Zustand persistence
@@ -115,7 +115,7 @@ export const exportPersistedState = (): string | null => {
  */
 export const importPersistedState = (stateJson: string): boolean => {
   try {
-    const parsed = JSON.parse(stateJson)
+    JSON.parse(stateJson) // Validate JSON format
     localStorage.setItem('clipforge-editor-store', stateJson)
     return true
   } catch (error) {
