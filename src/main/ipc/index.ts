@@ -6,12 +6,14 @@
  */
 
 import { registerVideoHandlers } from './videoHandlers'
+import { registerExportHandlers } from './exportHandlers'
 
 /**
  * Register all IPC handlers
  */
 export function registerIpcHandlers(): void {
   registerVideoHandlers()
+  registerExportHandlers()
 }
 
 /**
@@ -19,5 +21,6 @@ export function registerIpcHandlers(): void {
  */
 export function unregisterIpcHandlers(): void {
   // Video handlers will be unregistered individually
+  // Export handlers will be unregistered individually
   // Add other handler unregistration here as needed
 }

@@ -2,30 +2,324 @@
 
 ## Current Work Focus
 
-**Phase 6: Trim Controls** - ✅ COMPLETE - Draggable trim handles on timeline with keyboard shortcuts, real-time visual feedback, and responsive layout integration.
+**Phase 7: Export Pipeline** - 🔄 PLANNING - Export modal, progress tracking, file system integration with dynamic UI components.
 
 ## Recent Changes
 
 - ✅ **Phase 6 Complete**: Draggable trim handles fully implemented and integrated
-- ✅ **Store Enhancement**: Added activeHandle, dragStartX, dragStartTrimValue state
-- ✅ **Trim Actions**: Added updateTrimStart(), updateTrimEnd() with 0.05s min gap validation
-- ✅ **Timeline Integration**: Added draggable trim handles directly to Timeline
-- ✅ **Consolidated UI**: Merged trim display and controls into Timeline component
-- ✅ **Removed Duplication**: Deleted separate TrimControls component for cleaner UI
-- ✅ **Layout Simplification**: Timeline now includes all trim functionality in one box
-- ✅ **Keyboard Support**: I/O/R keys already configured for trim control
-- ✅ **Playhead Sync**: Playhead follows when dragging trim START handle (not end)
-- ✅ **Trim-Aware Playback**: Video automatically stops at trimEnd during playback
-- ✅ **Intelligent Boundaries**: Playhead syncs to trimStart if adjusted below it
-- ✅ **Professional Behavior**: Implements industry-standard trim-constrained playback
+- 🔄 **Phase 7 Planning**: Comprehensive implementation plan created
 
 ## Current Status
 
-- **Phase 5**: Timeline UI ✅ COMPLETE
-- **Phase 6**: Trim Controls 🔄 PLANNING
-- **Implementation**: Design pattern established, ready for development
-- **Testing**: Planning phase includes responsiveness validation
-- **Next Phase**: Phase 7 - Export Pipeline
+- **Phase 6**: Trim Controls ✅ COMPLETE
+- **Phase 7**: Export Pipeline 🔄 PLANNING
+- **Implementation**: Ready to start core development
+- **Next Phase**: Phase 8 - UI/UX Polish
+
+## Phase 7 Implementation Plan
+
+### Overview
+
+Phase 7 focuses on implementing the complete export pipeline. Users will be able to export trimmed videos with progress tracking, quality settings, and file system integration. Key priorities:
+
+1. **Responsive Export Modal**: Modal stays within screen bounds at all resolutions
+2. **No Layout Disruption**: Export button integrates seamlessly with Timeline
+3. **Real-time Progress**: Show export progress with visual feedback
+4. **Error Handling**: Graceful error messages and recovery
+5. **File System Integration**: Browse, save, and open exported files
+
+### Detailed Implementation Strategy
+
+#### 1. Component Architecture
+
+```
+App
+├── Layout
+│   ├── Sidebar (MediaLibrary, ImportManager)
+│   └── Main Content
+│       ├── PreviewPlayer (flex-1)
+│       ├── Timeline (flex-shrink-0)
+│       ├── ExportButton (flex-shrink-0) ← NEW
+│       └── ExportModal (portal/z-50) ← NEW
+└── Toaster
+```
+
+#### 2. File Structure
+
+**New files to create:**
+
+- `src/components/ExportModal.tsx` - Main export modal component
+- `src/hooks/useExport.ts` - Export management hook (may update existing)
+- `src/main/ipc/exportHandlers.ts` - IPC handlers for export operations
+
+**Files to modify:**
+
+- `src/stores/editorStore.ts` - Add/enhance export state
+- `src/preload/index.ts` - Expose export APIs
+- `src/main/ipc/index.ts` - Register export IPC handlers
+- `src/renderer/src/components/Layout.tsx` - Add export button and modal integration
+
+#### 3. Store Enhancement
+
+**New/Updated State Properties:**
+
+- `isExporting: boolean` - Currently exporting
+- `exportProgress: number` - 0-100 percentage
+- `exportSettings: { format: 'mp4', quality: 'high' | 'medium' | 'low' }` - Export settings
+- `activeModal: 'export' | null` - Currently active modal
+
+**New/Updated Actions:**
+
+- `startExport(outputPath: string): Promise<void>` - Begin export process
+- `setActiveModal(modal: string | null): void` - Show/hide modals
+- `setExportSettings(settings: ExportSettings): void` - Update export quality/format
+
+#### 4. ExportModal Component Design
+
+**Modal Structure:**
+
+```
+ExportModal (fixed inset-0, z-50)
+├── Backdrop (bg-black/50, animated)
+└── Content Box (max-w-md, rounded-lg)
+    ├── Header (title + close button)
+    ├── Body
+    │   ├── Filename Input
+    │   ├── Save Location (input + browse button)
+    │   ├── Quality Settings (dropdown)
+    │   ├── Status Area (progress/error/success)
+    │   └── Action Buttons
+```
+
+**Responsive Design:**
+
+- Desktop (>1024px): Modal centered, full features
+- Tablet (768-1024px): Modal centered, adjusted width
+- Mobile (<768px): Modal full width with margins, stack all inputs
+
+**Key CSS Classes:**
+
+- Modal: `fixed inset-0 bg-black/50 flex items-center justify-center z-50`
+- Content: `bg-gray-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto`
+- No overflow outside viewport with proper max-height
+
+#### 5. Layout Integration
+
+**Current Structure:**
+
+```
+Main Content (flex-col, overflow-hidden)
+├── PreviewPlayer (flex-1, min-h-0)
+└── Timeline (flex-shrink-0)
+```
+
+**New Structure:**
+
+```
+Main Content (flex-col, overflow-hidden)
+├── PreviewPlayer (flex-1, min-h-0)
+├── Timeline (flex-shrink-0)
+└── Export Button Row (flex-shrink-0, p-4) ← NEW
+    └── Button: "Export Trimmed Video"
+```
+
+**Constraints:**
+
+- PreviewPlayer: `flex-1, min-h-0` - Takes available space
+- Timeline: `flex-shrink-0` - Fixed height (~120px)
+- Export Button Row: `flex-shrink-0, h-auto` - Minimal height (~80px)
+- Main Content: `overflow-hidden` - Prevents any overflow
+- Gap: `gap-6` (24px) - Maintains spacing
+
+#### 6. Responsive Design Strategy
+
+**Screen Size Handling:**
+
+- Modal always centers with max-width constraint
+- Modal height: `max-h-[90vh]` - Prevents going outside viewport
+- Modal width: `max-w-md` on desktop, `max-w-sm` on smaller screens
+- All inputs use full width within modal
+- Buttons stack horizontally on desktop, vertically on small screens
+
+**Overflow Prevention:**
+
+- Modal content: `overflow-y-auto` with max-height
+- Input fields: `w-full` within modal
+- No fixed pixel widths that could exceed modal
+- Padding consistent: `p-6` within modal
+
+**Touch Considerations:**
+
+- Touch-friendly button sizes: min `h-10` (40px)
+- Adequate spacing: `space-y-4` between sections
+- Input fields easily tappable on mobile
+
+#### 7. Export Button Implementation
+
+**Location:** Below Timeline in Layout component
+
+**Structure:**
+
+```tsx
+<motion.div className="flex-shrink-0 px-8 py-4 border-t border-gray-700">
+  <Button onClick={() => setActiveModal('export')} disabled={!selectedClip} className="w-full">
+    <Download className="w-4 h-4 mr-2" />
+    Export Trimmed Video
+  </Button>
+</motion.div>
+```
+
+**Styling:**
+
+- Full width within content area
+- Clear visual separation from timeline
+- Disabled when no clip selected
+- Hover effect for interactivity
+
+#### 8. IPC Communication Flow
+
+**Main Process → Renderer:**
+
+```typescript
+// Show file picker dialog
+window.electronAPI.selectExportPath(filename) → IPC → main process → native dialog
+```
+
+**Main Process → Renderer:**
+
+```typescript
+// Open folder in file explorer
+window.electronAPI.openFolder(folderPath) → IPC → main process → shell.openPath()
+```
+
+**Renderer → Main Process:**
+
+```typescript
+// Perform actual export
+window.electronAPI.trimAndExport(params) → FFmpeg execution → progress updates
+```
+
+#### 9. Export Process Flow
+
+```
+User clicks Export Button
+  ↓
+Modal opens (setActiveModal('export'))
+  ↓
+User enters filename and chooses location (handleBrowse)
+  ↓
+User clicks Export button
+  ↓
+handleExport() validates inputs
+  ↓
+startExport() called → set isExporting: true
+  ↓
+Main process receives IPC call
+  ↓
+FFmpeg starts trimming/encoding
+  ↓
+Progress updates stream back → exportProgress: 0-100
+  ↓
+FFmpeg completes
+  ↓
+UI shows success message
+  ↓
+User can click "Open Folder" or close modal
+
+On Error:
+  ↓
+exportStatus: 'error'
+  ↓
+Show error message
+  ↓
+User can retry or close
+```
+
+#### 10. Error Handling Strategy
+
+**Validation Errors:**
+
+- No filename: Show "Please enter filename"
+- No path selected: Show "Please choose save location"
+- Invalid filename: Show "Invalid filename"
+
+**Export Errors:**
+
+- FFmpeg error: Show "Export failed: [error message]"
+- File write error: Show "Could not save file"
+- Disk full: Show "Insufficient disk space"
+
+**UI Recovery:**
+
+- Reset exportStatus to 'idle' on close
+- Allow retry without re-entering all fields
+- Remember last export path for convenience
+
+#### 11. Responsive Design Checklist
+
+- [ ] Modal fits on 1024x768 screens
+- [ ] Modal fits on mobile (320px width)
+- [ ] No horizontal scrolling on any screen
+- [ ] Input fields fully visible on small screens
+- [ ] Buttons reachable without scrolling modal
+- [ ] Progress bar visible during export
+- [ ] Error messages don't overflow
+- [ ] All icons render properly
+- [ ] Touch targets >= 44px on mobile
+- [ ] Modal doesn't go behind other UI elements (z-50)
+- [ ] Modal backdrop doesn't interfere with interaction
+
+#### 12. Performance Optimizations
+
+1. **Modal Lazy Loading**: Only render when activeModal === 'export'
+2. **Progress Debouncing**: Limit progress updates to 100ms intervals
+3. **useMemo**: Memoize filename and path calculations
+4. **useCallback**: Stable function references for handlers
+5. **Motion Animation**: GPU-accelerated animations (scale, opacity)
+
+#### 13. Browser/Platform Compatibility
+
+**Dialog Opening:**
+
+- macOS: native file picker via Electron dialog API
+- Windows: native file picker via Electron dialog API
+- Linux: native file picker via Electron dialog API
+
+**Folder Opening:**
+
+- macOS: `open` command via shell
+- Windows: `explorer` command via shell
+- Linux: `xdg-open` command via shell
+
+### Implementation Order
+
+1. **Create ExportModal component** - Build the UI
+2. **Update store** - Add/enhance export state
+3. **Create IPC handlers** - File picker, folder open, export
+4. **Update preload script** - Expose APIs
+5. **Integrate with Layout** - Add button and modal
+6. **Testing** - Responsive design, error cases
+
+### Quality Assurance
+
+**Testing Strategy:**
+
+- [ ] Test on 3+ screen sizes
+- [ ] Test with 0-2000px file sizes
+- [ ] Test with long filenames (50+ chars)
+- [ ] Test error scenarios (no space, invalid path)
+- [ ] Test modal animation smoothness
+- [ ] Test keyboard navigation (Tab, Escape)
+- [ ] Test button disabled states
+- [ ] Verify no layout overflow
+
+### Known Considerations
+
+1. **File Picker Dialog**: Will block modal interaction (native dialog behavior)
+2. **Progress Updates**: Stream from FFmpeg child process
+3. **File Permissions**: May need error handling for permission denied
+4. **Large Files**: Progress might freeze briefly on very large exports
+5. **Cancellation**: FFmpeg kill process needs graceful handling (Phase 7.2)
 
 ## Phase 6 Implementation Plan
 

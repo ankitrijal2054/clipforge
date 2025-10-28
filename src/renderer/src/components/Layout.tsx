@@ -1,8 +1,11 @@
 import { motion } from 'framer-motion'
+import { Download } from 'lucide-react'
 import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
 import { PreviewPlayer } from './PreviewPlayer'
 import { Timeline } from './Timeline'
+import { ExportModal } from '../../../components/ExportModal'
+import { Button } from '../../../components/ui/button'
 import { useEditorStore } from '../../../stores/editorStore'
 
 /**
@@ -18,6 +21,8 @@ import { useEditorStore } from '../../../stores/editorStore'
  */
 export function Layout() {
   const { clips } = useEditorStore()
+  const selectedClip = useEditorStore((state) => state.selectedClip)
+  const setActiveModal = useEditorStore((state) => state.setActiveModal)
 
   return (
     <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
@@ -117,9 +122,29 @@ export function Layout() {
             >
               <Timeline />
             </motion.div>
+
+            {/* Export Button Row - fixed height, responsive width */}
+            <motion.div
+              className="flex-shrink-0 px-0 py-4 border-t border-gray-700"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <Button
+                onClick={() => setActiveModal('export')}
+                disabled={!selectedClip}
+                className="w-full"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export Trimmed Video
+              </Button>
+            </motion.div>
           </div>
         )}
       </div>
+
+      {/* Export Modal - floats above all content */}
+      <ExportModal />
     </div>
   )
 }
