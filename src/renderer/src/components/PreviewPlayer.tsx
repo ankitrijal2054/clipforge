@@ -41,7 +41,6 @@ function getVideoSrc(filePath: string): string {
  * - Professional UI with smooth animations
  */
 export function PreviewPlayer() {
-  const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
@@ -64,8 +63,8 @@ export function PreviewPlayer() {
     resetTrim
   } = useEditorStore()
 
-  // Use video player hook
-  const { seekTo, skip, isReady } = useVideoPlayer()
+  // Use video player hook (provides the videoRef wired with playback logic)
+  const { videoRef, seekTo, skip, isReady } = useVideoPlayer()
 
   // Use keyboard shortcuts
   useKeyboardShortcuts()
