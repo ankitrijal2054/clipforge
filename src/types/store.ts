@@ -23,6 +23,9 @@ export interface EditorStore {
   trimStart: number
   trimEnd: number
   isDragging: boolean
+  activeHandle: 'start' | 'end' | null
+  dragStartX: number
+  dragStartTrimValue: number
 
   // Export
   isExporting: boolean
@@ -39,6 +42,10 @@ export interface EditorStore {
   selectClip: (id: string) => void
   removeClip: (id: string) => void
   setTrimPoints: (start: number, end: number) => void
+  updateTrimStart: (time: number) => void
+  updateTrimEnd: (time: number) => void
+  setActiveHandle: (handle: 'start' | 'end' | null) => void
+  setDragStartValues: (x: number, trimValue: number) => void
   setPlayhead: (time: number) => void
   setZoomLevel: (zoomLevel: number) => void
   setTimelineScrollOffset: (offset: number) => void

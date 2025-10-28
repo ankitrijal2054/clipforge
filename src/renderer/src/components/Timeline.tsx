@@ -3,6 +3,8 @@ import { motion } from 'framer-motion'
 import { ZoomIn, ZoomOut } from 'lucide-react'
 import { useTimeline } from '../../../stores/editorStore'
 import { useTimelineActions } from '../../../stores/editorStore'
+import { useTrimHandle } from '../../../stores/editorStore'
+import { useTrimActions } from '../../../stores/editorStore'
 import { formatDuration } from '../../../utils/formatters'
 import { Button } from '../../../components/ui/button'
 
@@ -40,9 +42,11 @@ export function Timeline() {
 
   // Get state from store
   const { playhead, duration, zoomLevel, timelineScrollOffset, trimStart, trimEnd } = useTimeline()
+  const { activeHandle } = useTrimHandle()
 
   // Get actions from store
   const { setPlayhead, setZoomLevel, setTimelineScrollOffset } = useTimelineActions()
+  const { updateTrimStart, updateTrimEnd, setActiveHandle, setIsDragging } = useTrimActions()
 
   // Handle window resize for responsive design
   useEffect(() => {
@@ -163,7 +167,58 @@ export function Timeline() {
     [pixelsPerSecond, duration, timelineScrollOffset, setPlayhead]
   )
 
-  // Handle playhead drag
+  // Handle trim handle mouse down
+  const handleTrimHandleMouseDown = useCallback(
+    (handle: 'start' | 'end') => (e: React.MouseEvent) => {
+      e.stopPropagation()
+      setActiveHandle(handle)
+      setIsDragging(true)
+    },
+    [setActiveHandle, setIsDragging]
+  )
+
+  // Handle trim handle drag movement
+  useEffect(() => {
+    if (!activeHandle || !trackRef.current) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = trackRef.current!.getBoundingClientRect()
+      const mouseX = e.clientX - rect.left + timelineScrollOffset
+
+      const time = mouseX / pixelsPerSecond
+      const clampedTime = Math.max(0, Math.min(time, duration))
+
+      if (activeHandle === 'start') {
+        updateTrimStart(clampedTime)
+      } else {
+        updateTrimEnd(clampedTime)
+      }
+    }
+
+    const handleMouseUp = () => {
+      setActiveHandle(null)
+      setIsDragging(false)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [
+    activeHandle,
+    pixelsPerSecond,
+    duration,
+    timelineScrollOffset,
+    updateTrimStart,
+    updateTrimEnd,
+    setActiveHandle,
+    setIsDragging
+  ])
+
+  // Handle playhead mouse down
   const handlePlayheadMouseDown = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     setIsDraggingPlayhead(true)
@@ -335,6 +390,32 @@ export function Timeline() {
                 }}
               />
             )}
+
+            {/* Trim Handle - Start */}
+            <motion.div
+              className="absolute top-8 h-12 w-2 bg-blue-400 cursor-ew-resize hover:bg-blue-300 transition-colors"
+              style={{
+                left: `${trimStart * pixelsPerSecond}px`
+              }}
+              onMouseDown={handleTrimHandleMouseDown('start')}
+              animate={{
+                backgroundColor: activeHandle === 'start' ? '#3b82f6' : '#60a5fa'
+              }}
+              transition={{ type: 'tween', duration: 0.1 }}
+            />
+
+            {/* Trim Handle - End */}
+            <motion.div
+              className="absolute top-8 h-12 w-2 bg-blue-400 cursor-ew-resize hover:bg-blue-300 transition-colors"
+              style={{
+                left: `${trimEnd * pixelsPerSecond}px`
+              }}
+              onMouseDown={handleTrimHandleMouseDown('end')}
+              animate={{
+                backgroundColor: activeHandle === 'end' ? '#3b82f6' : '#60a5fa'
+              }}
+              transition={{ type: 'tween', duration: 0.1 }}
+            />
 
             {/* Playhead - with cursor for dragging */}
             <motion.div

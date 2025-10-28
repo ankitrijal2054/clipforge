@@ -35,6 +35,9 @@ export const useEditorStore = create<EditorStore>()(
         trimStart: 0,
         trimEnd: 0,
         isDragging: false,
+        activeHandle: null,
+        dragStartX: 0,
+        dragStartTrimValue: 0,
         isExporting: false,
         exportProgress: 0,
         exportSettings: { format: 'mp4', quality: 'high' },
@@ -140,6 +143,31 @@ export const useEditorStore = create<EditorStore>()(
 
         setIsDragging: (isDragging: boolean) => set({ isDragging }),
 
+        // Trim handle control actions
+        updateTrimStart: (time: number) =>
+          set((state) => {
+            const clampedTime = Math.max(0, Math.min(time, state.duration))
+            const minGap = 0.05
+            const newStart = Math.min(clampedTime, state.trimEnd - minGap)
+            return { trimStart: newStart }
+          }),
+
+        updateTrimEnd: (time: number) =>
+          set((state) => {
+            const clampedTime = Math.max(0, Math.min(time, state.duration))
+            const minGap = 0.05
+            const newEnd = Math.max(clampedTime, state.trimStart + minGap)
+            return { trimEnd: newEnd }
+          }),
+
+        setActiveHandle: (handle: 'start' | 'end' | null) => set({ activeHandle: handle }),
+
+        setDragStartValues: (x: number, trimValue: number) =>
+          set({
+            dragStartX: x,
+            dragStartTrimValue: trimValue
+          }),
+
         // Export actions
         startExport: async () => {
           const state = get()
@@ -243,6 +271,15 @@ export const useTrim = () => {
   return { trimStart, trimEnd, isDragging }
 }
 
+// Trim handle selectors
+export const useTrimHandle = () => {
+  const activeHandle = useEditorStore((state) => state.activeHandle)
+  const dragStartX = useEditorStore((state) => state.dragStartX)
+  const dragStartTrimValue = useEditorStore((state) => state.dragStartTrimValue)
+
+  return { activeHandle, dragStartX, dragStartTrimValue }
+}
+
 // Export selectors
 export const useExport = () => {
   const isExporting = useEditorStore((state) => state.isExporting)
@@ -283,8 +320,20 @@ export const useTrimActions = () => {
   const setTrimPoints = useEditorStore((state) => state.setTrimPoints)
   const resetTrim = useEditorStore((state) => state.resetTrim)
   const setIsDragging = useEditorStore((state) => state.setIsDragging)
+  const updateTrimStart = useEditorStore((state) => state.updateTrimStart)
+  const updateTrimEnd = useEditorStore((state) => state.updateTrimEnd)
+  const setActiveHandle = useEditorStore((state) => state.setActiveHandle)
+  const setDragStartValues = useEditorStore((state) => state.setDragStartValues)
 
-  return { setTrimPoints, resetTrim, setIsDragging }
+  return {
+    setTrimPoints,
+    resetTrim,
+    setIsDragging,
+    updateTrimStart,
+    updateTrimEnd,
+    setActiveHandle,
+    setDragStartValues
+  }
 }
 
 export const useTimelineActions = () => {

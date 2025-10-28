@@ -2,25 +2,404 @@
 
 ## Current Work Focus
 
-**Phase 5: Timeline UI** - ✅ COMPLETE & FIXED - Fully responsive timeline component with playhead, zoom, pan, and click-to-seek functionality. Fixed infinite loop issue and responsive fit-to-screen behavior.
+**Phase 6: Trim Controls** - ✅ COMPLETE - Draggable trim handles on timeline with keyboard shortcuts, real-time visual feedback, and responsive layout integration.
 
 ## Recent Changes
 
-- ✅ **Phase 5 Complete**: Timeline UI fully implemented and integrated
-- ✅ **Fixed Infinite Loop Bug**: Refactored Zustand selectors to return stable references
-- ✅ **Fixed Responsive Timeline**: Timeline now fits entire video on screen at 1x zoom
-- ✅ **Default 100% Zoom**: Set zoom to 100% (1x) when video is uploaded
-- ✅ **Store Enhancement**: Added setZoomLevel and setTimelineScrollOffset actions
-- ✅ **Timeline Component**: Created responsive Timeline with all features
-- ✅ **Layout Integration**: Integrated Timeline into main editing view
-- ✅ **Responsive Design**: All components fit within screen bounds
+- ✅ **Phase 6 Complete**: Draggable trim handles fully implemented and integrated
+- ✅ **Store Enhancement**: Added activeHandle, dragStartX, dragStartTrimValue state
+- ✅ **Trim Actions**: Added updateTrimStart(), updateTrimEnd() with 0.05s min gap validation
+- ✅ **Timeline Handles**: Added draggable trim handles with real-time feedback
+- ✅ **TrimControls Component**: Created new component with trim display and reset button
+- ✅ **Layout Integration**: Added TrimControls below Timeline with flex-shrink-0
+- ✅ **Keyboard Support**: I/O/R keys already configured for trim control
+- ✅ **Visual Feedback**: Handles change color on hover and drag (blue-400 → blue-500)
+- ✅ **Responsive Design**: All components stay within viewport bounds
 
 ## Current Status
 
 - **Phase 5**: Timeline UI ✅ COMPLETE
-- **Implementation**: Production-ready with all features
-- **Testing**: Ready for manual testing with real videos
-- **Next Phase**: Phase 6 - Trim Controls (draggable handles on timeline)
+- **Phase 6**: Trim Controls 🔄 PLANNING
+- **Implementation**: Design pattern established, ready for development
+- **Testing**: Planning phase includes responsiveness validation
+- **Next Phase**: Phase 7 - Export Pipeline
+
+## Phase 6 Implementation Plan
+
+### Overview
+
+Phase 6 focuses on adding interactive trim controls to the timeline. Users will be able to drag handles to set trim in/out points with real-time preview. Key priorities:
+
+1. **UI Responsiveness**: All components stay within screen bounds
+2. **No Layout Disruption**: Trim controls integrate seamlessly with existing layout
+3. **Real-time Feedback**: Immediate visual feedback during interactions
+4. **Keyboard Support**: I/O keys for quick trim point setting
+5. **Cross-browser Compatibility**: Works on all platforms
+
+### Detailed Tasks Breakdown
+
+#### 1. Store Enhancement (editorStore.ts)
+
+**Goal**: Add trim control state and actions
+
+**New State Properties**:
+
+- `trimStart: number` - Start trim point in seconds (already exists)
+- `trimEnd: number` - End trim point in seconds (already exists)
+- `isDragging: boolean` - Track if handle is being dragged (already exists)
+- `activeHandle: 'start' | 'end' | null` - Which handle is being dragged
+- `dragStartX: number` - Mouse X position when drag started
+- `dragStartTrimValue: number` - Trim value when drag started
+
+**New Actions**:
+
+- `setActiveHandle(handle: 'start' | 'end' | null)` - Set active dragging handle
+- `setDragStartValues(x: number, trimValue: number)` - Record drag start values
+- `updateTrimFromDrag(newX: number, pixelsPerSecond: number, duration: number)` - Update trim based on drag
+- `updateTrimStart(time: number)` - Set trim start with validation
+- `updateTrimEnd(time: number)` - Set trim end with validation
+- `resetTrim()` - Reset to full video (already exists)
+- `setIsDragging(isDragging: boolean)` - Update dragging state (already exists)
+
+**Validation Rules**:
+
+- Trim start must be >= 0
+- Trim end must be <= duration
+- Trim start must be < (trimEnd - 0.05) minimum gap
+- Trim end must be > (trimStart + 0.05) minimum gap
+
+#### 2. Timeline Component Enhancement (Timeline.tsx)
+
+**Goal**: Add draggable trim handles to timeline
+
+**New Features**:
+
+- **Trim Handle Rendering**:
+  - Start handle at trimStart position
+  - End handle at trimEnd position
+  - Handles rendered as 8px wide rounded boxes
+  - Blue color with hover state
+  - Cursor: ew-resize
+
+- **Handle Styling**:
+  - Normal state: `bg-blue-400`
+  - Hover state: `bg-blue-300`
+  - Dragging state: `bg-blue-500`
+  - Smooth transitions
+
+- **Mouse Event Handlers**:
+  - `onMouseDown` on handles: Start drag
+  - Document-level `onMouseMove`: Update trim while dragging
+  - Document-level `onMouseUp`: End drag
+
+- **Visual Feedback During Drag**:
+  - Handle color changes to indicate active state
+  - Tooltip shows current time value
+  - Trim region highlighting updates in real-time
+  - Cursor changes to ew-resize during drag
+
+#### 3. Trim Controls Component Creation (TrimControls.tsx)
+
+**Goal**: Standalone component for trim point display and numeric input
+
+**Location**: Positioned below Timeline, above future export button area
+
+**Features**:
+
+- **Trim Point Display**:
+  - Start time: formatted (MM:SS)
+  - Duration: formatted (MM:SS)
+  - End time: formatted (MM:SS)
+  - Responsive layout (stack on small screens)
+
+- **Numeric Input Fields** (optional):
+  - Manual input for precise trim points
+  - Validation on input
+  - Real-time format feedback
+
+- **Reset Button**:
+  - "Reset Trim" button with RotateCcw icon
+  - Resets to full video duration
+  - Hover effect
+
+- **Trim Bar Visualization**:
+  - Visual representation of trim region
+  - Same styling as timeline trim region
+  - Updates in real-time during drag
+
+**Layout Structure**:
+
+```
+TrimControls
+├── Header (flex between)
+│   ├── Title
+│   └── Reset Button
+├── Trim Point Display
+│   ├── Start Time
+│   ├── Duration
+│   └── End Time
+└── Trim Bar
+    ├── Trim Region (blue)
+    ├── Start Handle
+    └── End Handle
+```
+
+#### 4. Keyboard Shortcuts Integration (useKeyboardShortcuts.ts)
+
+**Goal**: Add I/O key support for trim control
+
+**Keyboard Mappings**:
+
+- `I` - Set trim in point (start) to current playhead
+- `O` - Set trim out point (end) to current playhead
+- `R` - Reset trim to full video
+- `Shift+I` - Move trim start forward 1 second
+- `Shift+O` - Move trim end forward 1 second
+
+**Implementation**:
+
+- Use existing `react-hotkeys-hook`
+- Trigger store actions on key press
+- Provide visual feedback (toast or temporary highlight)
+
+#### 5. UI Responsiveness Strategy
+
+**Key Principles**:
+
+1. **Container-Relative Sizing**: All trim controls size relative to container, not fixed values
+2. **Minimum Heights**: Trim handles min 8px, controls min 60px total height
+3. **Overflow Prevention**: All components use overflow-hidden and flex layout
+4. **Screen-Aware**: Components detect and adapt to screen size changes
+
+**Implementation Details**:
+
+**Timeline Area** (Already responsive):
+
+```typescript
+// Timeline container with ResizeObserver
+const timelineRef = useRef<HTMLDivElement>(null)
+const [containerWidth, setContainerWidth] = useState(0)
+
+// ResizeObserver tracks width changes
+const resizeObserver = new ResizeObserver(() => {
+  if (timelineRef.current) {
+    setContainerWidth(timelineRef.current.offsetWidth)
+  }
+})
+```
+
+**Trim Handles Positioning**:
+
+```typescript
+// Handles positioned based on percentages and container width
+const startHandleLeft = (trimStart / duration) * containerWidth
+const endHandleLeft = (trimEnd / duration) * containerWidth
+
+// Handles never go outside container
+const constrainedStart = Math.max(0, Math.min(startHandleLeft, containerWidth - 8))
+const constrainedEnd = Math.max(0, Math.min(endHandleLeft, containerWidth - 8))
+```
+
+**Drag Coordinate System**:
+
+```typescript
+// Convert mouse position to timeline coordinates
+const rect = timelineRef.current.getBoundingClientRect()
+const mouseX = e.clientX - rect.left + timelineScrollOffset
+
+// Account for zoom and scroll
+const time = mouseX / pixelsPerSecond
+```
+
+#### 6. Layout Integration Points
+
+**Current Layout Structure**:
+
+```
+Layout (h-screen, flex)
+├── Sidebar (w-80, overflow-hidden)
+└── Main Content (flex-1, flex-col, overflow-hidden)
+    ├── Welcome OR
+    └── Editing View (flex-1, flex-col, p-8, gap-6)
+        ├── PreviewPlayer (flex-1, min-h-0)
+        └── Timeline (flex-shrink-0)
+```
+
+**New Layout With Trim Controls**:
+
+```
+Layout (h-screen, flex)
+├── Sidebar (w-80, overflow-hidden)
+└── Main Content (flex-1, flex-col, overflow-hidden)
+    ├── Welcome OR
+    └── Editing View (flex-1, flex-col, p-8, gap-6)
+        ├── PreviewPlayer (flex-1, min-h-0)
+        ├── Timeline (flex-shrink-0)
+        └── TrimControls (flex-shrink-0) ← NEW
+```
+
+**Key Constraints**:
+
+- PreviewPlayer: `flex-1, min-h-0` - Takes available space, can shrink to 0
+- Timeline: `flex-shrink-0` - Fixed height (120px base + responsive padding)
+- TrimControls: `flex-shrink-0` - Fixed height (~100px)
+- Main Content: `overflow-hidden` - Prevents any overflow
+- Gap: `gap-6` (24px) - Maintains spacing between sections
+
+#### 7. Drag Handle Implementation Details
+
+**Handle Structure**:
+
+```typescript
+// Start Handle
+<div
+  ref={startHandleRef}
+  className="absolute top-0 w-2 h-full bg-blue-400 cursor-ew-resize hover:bg-blue-300 transition-colors"
+  style={{
+    left: `${(trimStart / duration) * 100}%`,
+  }}
+  onMouseDown={() => startDrag('start')}
+/>
+
+// End Handle
+<div
+  ref={endHandleRef}
+  className="absolute top-0 w-2 h-full bg-blue-400 cursor-ew-resize hover:bg-blue-300 transition-colors"
+  style={{
+    left: `${(trimEnd / duration) * 100}%`,
+  }}
+  onMouseDown={() => startDrag('end')}
+/>
+```
+
+**Drag Logic**:
+
+```typescript
+const startDrag = (handle: 'start' | 'end') => {
+  setActiveHandle(handle)
+  setIsDragging(true)
+}
+
+const handleMouseMove = (e: MouseEvent) => {
+  if (!activeHandle || !timelineRef.current) return
+
+  const rect = timelineRef.current.getBoundingClientRect()
+  const mouseX = e.clientX - rect.left + timelineScrollOffset
+  const time = mouseX / pixelsPerSecond
+
+  // Clamp time to valid range
+  const clampedTime = Math.max(0, Math.min(time, duration))
+
+  if (activeHandle === 'start') {
+    // Ensure start < end with minimum gap
+    const newStart = Math.min(clampedTime, trimEnd - 0.05)
+    updateTrimStart(newStart)
+  } else {
+    // Ensure end > start with minimum gap
+    const newEnd = Math.max(clampedTime, trimStart + 0.05)
+    updateTrimEnd(newEnd)
+  }
+}
+
+const handleMouseUp = () => {
+  setActiveHandle(null)
+  setIsDragging(false)
+}
+```
+
+### Responsive Design Checklist
+
+- [ ] Trim handles stay within timeline container bounds
+- [ ] Handles scale appropriately with zoom levels (0.5x - 10x)
+- [ ] Handles remain visible at all zoom levels (min 8px width)
+- [ ] Drag works correctly with horizontal scroll at high zoom
+- [ ] Touch events work on tablets/touch devices (future enhancement)
+- [ ] Small screen (<768px): Stack controls vertically
+- [ ] Medium screen (768-1024px): Horizontal layout with adjusted spacing
+- [ ] Large screen (>1024px): Full layout with all features
+- [ ] No UI elements extend beyond viewport
+- [ ] PreviewPlayer maintains aspect ratio
+- [ ] Sidebar doesn't overflow with long filenames
+- [ ] Timeline scrollbar only appears when needed
+
+### Visual Design Specifications
+
+**Trim Handles**:
+
+- Width: 8px (responsive, min 6px, max 12px)
+- Color: `#60a5fa` (blue-400)
+- Hover: `#93c5fd` (blue-300)
+- Active: `#3b82f6` (blue-500)
+- Radius: 0 (sharp to align with timeline)
+
+**Trim Region**:
+
+- Background: `rgba(59, 130, 246, 0.3)` (blue with transparency)
+- Border: 1px solid `#3b82f6` (blue-500)
+- Transitions: 100ms ease-in-out
+
+**Tooltip**:
+
+- Background: `rgba(0, 0, 0, 0.8)` (dark)
+- Text: white
+- Padding: 4px 8px
+- Border radius: 4px
+- Font size: 12px
+- Offset from handle: 4px
+
+**TrimControls Component**:
+
+- Background: `#1f2937` (gray-800)
+- Border: 1px solid `#374151` (gray-700)
+- Padding: 16px
+- Border radius: 8px
+- Shadow: 0 4px 6px rgba(0, 0, 0, 0.1)
+
+### Performance Optimizations
+
+1. **Debounce Drag Updates**: Limit update frequency to 60fps (16ms intervals)
+2. **CSS Transforms**: Use `left` property (GPU accelerated) for handle positioning
+3. **useMemo**: Memoize pixelsPerSecond and time marker calculations
+4. **Event Delegation**: Single mousemove listener on document instead of per-handle
+5. **ResizeObserver**: Throttle resize updates to avoid excessive re-renders
+6. **Avoid Re-renders**: Use Zustand selectors to return stable references
+
+### Testing Strategy
+
+**Unit Tests**:
+
+- Trim point validation logic
+- Drag coordinate calculations
+- Time formatting
+
+**Component Tests**:
+
+- Trim handles render at correct positions
+- Drag updates trim values correctly
+- Keyboard shortcuts trigger correct actions
+- Reset button resets trim values
+
+**Integration Tests**:
+
+- Timeline and TrimControls work together
+- Store updates propagate to UI
+- Keyboard shortcuts integrate with Zustand
+
+**Manual Testing**:
+
+- Test on 3 screen sizes (small, medium, large)
+- Test zoom levels (0.5x, 1x, 5x, 10x)
+- Test keyboard shortcuts with different trim values
+- Verify no layout overflow at any size
+- Test drag edge cases (start > end, min gap, etc.)
+
+### Known Considerations
+
+1. **Minimum Trim Gap**: 0.05 seconds (50ms) prevents zero-duration trims
+2. **Scroll Offset**: Must account for timeline scroll when zoomed
+3. **Touch Events**: Not in MVP but important for future tablet support
+4. **Snap to Frame**: Deferred to future phase but architecture allows easy addition
+5. **Performance at 10x Zoom**: May need debouncing if drag is too frequent
 
 ## Active Decisions and Considerations
 
