@@ -121,7 +121,7 @@ export function Layout() {
           </div>
         ) : (
           // Main editing view with video and timeline
-          <div className="flex-1 flex flex-col overflow-hidden p-8 gap-6">
+          <div className="flex-1 flex flex-col overflow-hidden p-4 gap-3">
             {/* Video Preview - takes priority space */}
             <motion.div
               className="flex-1 min-h-0"
