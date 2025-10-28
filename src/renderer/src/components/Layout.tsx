@@ -35,8 +35,22 @@ export function Layout() {
       >
         <div className="p-6 border-b border-gray-700 flex-shrink-0">
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">C</span>
+            <div className="w-16 h-16 rounded-lg flex items-center justify-center overflow-hidden">
+              <img
+                src="./assets/icon.png"
+                alt="ClipForge"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  // Fallback to gradient if icon fails to load
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
+                  const parent = target.parentElement
+                  if (parent) {
+                    parent.innerHTML =
+                      '<div class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-lg">C</span></div>'
+                  }
+                }}
+              />
             </div>
             <h1 className="text-xl font-bold text-white">ClipForge</h1>
           </div>
@@ -92,8 +106,22 @@ export function Layout() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl">
-                <span className="text-white font-bold text-3xl">C</span>
+              <div className="w-48 h-48 mx-auto mb-8 rounded-3xl flex items-center justify-center shadow-2xl overflow-hidden">
+                <img
+                  src="./assets/icon.png"
+                  alt="ClipForge"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback to gradient if icon fails to load
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                    const parent = target.parentElement
+                    if (parent) {
+                      parent.innerHTML =
+                        '<div class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl"><span class="text-white font-bold text-6xl">C</span></div>'
+                    }
+                  }}
+                />
               </div>
               <h2 className="text-4xl font-bold text-white mb-6">Welcome to ClipForge</h2>
               <p className="text-xl text-gray-400 mb-8 leading-relaxed">
