@@ -6,6 +6,13 @@ import {
   VideoThumbnailParams,
   ConvertVideoParams
 } from '../types/video'
+import type {
+  ScreenSource,
+  RecordingOptions,
+  MediaDeviceInfo,
+  RecordingState,
+  RecordingQuality
+} from '../types/recording'
 
 declare global {
   interface Window {
@@ -31,6 +38,27 @@ declare global {
       selectVideoFile: () => Promise<string | null>
       selectExportPath: (defaultFilename: string) => Promise<string | null>
       openFolder: (folderPath: string) => Promise<void>
+
+      // Recording operations
+      getScreenSources: () => Promise<ScreenSource[]>
+      getAudioDevices: () => Promise<MediaDeviceInfo[]>
+      startRecording: (options: RecordingOptions) => Promise<{ success: boolean; error?: string }>
+      stopRecording: () => Promise<{ success: boolean; filePath?: string; error?: string }>
+      pauseRecording: () => Promise<{ success: boolean; error?: string }>
+      resumeRecording: () => Promise<{ success: boolean; error?: string }>
+      getRecordingState: () => Promise<RecordingState>
+      saveRecordingData: (
+        data: ArrayBuffer,
+        fileName: string
+      ) => Promise<{ success: boolean; filePath?: string; error?: string }>
+      getRecordingQualitySettings: () => Promise<Record<string, RecordingQuality>>
+      cleanupRecordings: () => Promise<{ success: boolean; cleanedFiles?: number; error?: string }>
+
+      // Recording event listeners
+      onRecordingStateChanged: (callback: (state: RecordingState) => void) => () => void
+      onRecordingStopped: (
+        callback: (data: { filePath: string; duration: number }) => void
+      ) => () => void
     }
   }
 }

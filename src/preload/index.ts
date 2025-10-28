@@ -7,6 +7,13 @@ import {
   VideoThumbnailParams,
   ConvertVideoParams
 } from '../types/video'
+import type {
+  ScreenSource,
+  RecordingOptions,
+  MediaDeviceInfo,
+  RecordingState,
+  RecordingQuality
+} from '../types/recording'
 
 // Custom APIs for renderer
 const api = {
@@ -46,7 +53,54 @@ const api = {
     ipcRenderer.invoke('dialog:selectExportPath', defaultFilename),
 
   openFolder: (folderPath: string): Promise<void> =>
-    ipcRenderer.invoke('dialog:openFolder', folderPath)
+    ipcRenderer.invoke('dialog:openFolder', folderPath),
+
+  // Recording operations
+  getScreenSources: (): Promise<ScreenSource[]> => ipcRenderer.invoke('recording:getSources'),
+
+  getAudioDevices: (): Promise<MediaDeviceInfo[]> =>
+    ipcRenderer.invoke('recording:getAudioDevices'),
+
+  startRecording: (options: RecordingOptions): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('recording:start', options),
+
+  stopRecording: (): Promise<{ success: boolean; filePath?: string; error?: string }> =>
+    ipcRenderer.invoke('recording:stop'),
+
+  pauseRecording: (): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('recording:pause'),
+
+  resumeRecording: (): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('recording:resume'),
+
+  getRecordingState: (): Promise<RecordingState> => ipcRenderer.invoke('recording:getState'),
+
+  saveRecordingData: (
+    data: ArrayBuffer,
+    fileName: string
+  ): Promise<{ success: boolean; filePath?: string; error?: string }> =>
+    ipcRenderer.invoke('recording:saveData', data, fileName),
+
+  getRecordingQualitySettings: (): Promise<Record<string, RecordingQuality>> =>
+    ipcRenderer.invoke('recording:getQualitySettings'),
+
+  cleanupRecordings: (): Promise<{ success: boolean; cleanedFiles?: number; error?: string }> =>
+    ipcRenderer.invoke('recording:cleanup'),
+
+  // Recording event listeners
+  onRecordingStateChanged: (callback: (state: RecordingState) => void): (() => void) => {
+    const handler = (_event: any, state: RecordingState) => callback(state)
+    ipcRenderer.on('recording:stateChanged', handler)
+    return () => ipcRenderer.removeListener('recording:stateChanged', handler)
+  },
+
+  onRecordingStopped: (
+    callback: (data: { filePath: string; duration: number }) => void
+  ): (() => void) => {
+    const handler = (_event: any, data: { filePath: string; duration: number }) => callback(data)
+    ipcRenderer.on('recording:stopped', handler)
+    return () => ipcRenderer.removeListener('recording:stopped', handler)
+  }
 }
 
 // Combine electronAPI with custom export APIs for ExportModal
