@@ -44,7 +44,7 @@ export function PreviewPlayer() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
-  const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null)
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Get state and actions from store
   const {
@@ -124,24 +124,24 @@ export function PreviewPlayer() {
     if (isFullscreen) {
       const handleMouseMove = () => {
         setShowControls(true)
-        if (controlsTimeout) clearTimeout(controlsTimeout)
-        const timeout = setTimeout(() => setShowControls(false), 3000)
-        setControlsTimeout(timeout)
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+        controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000)
       }
 
-      const timeout = setTimeout(() => setShowControls(false), 3000)
-      setControlsTimeout(timeout)
+      // start initial hide timer
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+      controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000)
 
       document.addEventListener('mousemove', handleMouseMove)
       return () => {
         document.removeEventListener('mousemove', handleMouseMove)
-        if (timeout) clearTimeout(timeout)
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
       }
     } else {
       setShowControls(true)
-      if (controlsTimeout) clearTimeout(controlsTimeout)
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
     }
-  }, [isFullscreen, controlsTimeout])
+  }, [isFullscreen])
 
   // Calculate trim region percentage for visualization
   const trimStartPercent = duration > 0 ? (trimStart / duration) * 100 : 0
@@ -173,12 +173,15 @@ export function PreviewPlayer() {
       {/* Video Preview Area */}
       <div
         ref={containerRef}
-        className="relative bg-black rounded-xl overflow-hidden group shadow-2xl"
+        className={`relative bg-black overflow-hidden group shadow-2xl ${
+          isFullscreen ? 'rounded-none' : 'rounded-xl'
+        }`}
+        style={isFullscreen ? { width: '100vw', height: '100vh' } : undefined}
         onMouseEnter={() => setShowControls(true)}
         onMouseLeave={() => {
           if (isFullscreen) {
-            const timeout = setTimeout(() => setShowControls(false), 2000)
-            setControlsTimeout(timeout)
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+            controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 2000)
           }
         }}
       >
@@ -186,7 +189,7 @@ export function PreviewPlayer() {
         <video
           ref={videoRef}
           src={getVideoSrc(selectedClip.path)}
-          className="w-full h-80 object-contain"
+          className={isFullscreen ? 'w-full h-full object-contain' : 'w-full h-80 object-contain'}
           onLoadedMetadata={() => {
             if (videoRef.current) {
               setPlayhead(0)
