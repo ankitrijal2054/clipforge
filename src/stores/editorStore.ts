@@ -116,7 +116,9 @@ export const useEditorStore = create<EditorStore>()(
         resetTrim: () =>
           set((state) => ({
             trimStart: 0,
-            trimEnd: state.duration
+            trimEnd: state.duration,
+            playhead: 0,
+            isPlaying: false
           })),
 
         setIsDragging: (isDragging: boolean) => set({ isDragging }),

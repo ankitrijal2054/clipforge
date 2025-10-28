@@ -264,6 +264,49 @@ export function useKeyboardShortcuts() {
       preventDefault: true
     }
   )
+
+  // Skip backward 10 seconds (J key)
+  useHotkeys(
+    'j',
+    (e) => {
+      e.preventDefault()
+      const newTime = Math.max(0, playhead - 10)
+      setPlayhead(newTime)
+    },
+    {
+      enableOnFormTags: false,
+      preventDefault: true
+    }
+  )
+
+  // Skip forward 10 seconds (L key)
+  useHotkeys(
+    'l',
+    (e) => {
+      e.preventDefault()
+      const newTime = Math.min(duration, playhead + 10)
+      setPlayhead(newTime)
+    },
+    {
+      enableOnFormTags: false,
+      preventDefault: true
+    }
+  )
+
+  // Toggle fullscreen (F key)
+  useHotkeys(
+    'f',
+    (e) => {
+      e.preventDefault()
+      // This will be handled by the PreviewPlayer component
+      const event = new CustomEvent('toggleFullscreen')
+      window.dispatchEvent(event)
+    },
+    {
+      enableOnFormTags: false,
+      preventDefault: true
+    }
+  )
 }
 
 /**
@@ -275,9 +318,11 @@ export function useKeyboardShortcutHelp() {
     Space: 'Play/Pause',
     'Left/Right': 'Seek backward/forward (5s)',
     'Shift + Left/Right': 'Seek backward/forward (1s)',
+    'J/L': 'Skip backward/forward (10s)',
     I: 'Set trim in point',
     O: 'Set trim out point',
     R: 'Reset trim',
+    F: 'Toggle fullscreen',
     Escape: 'Close modal',
     'Plus/Minus': 'Volume up/down',
     M: 'Mute/unmute',

@@ -37,7 +37,16 @@ const api = {
     const handler = (_event: any, progress: ExportProgress) => callback(progress)
     ipcRenderer.on('video:convertProgress', handler)
     return () => ipcRenderer.removeListener('video:convertProgress', handler)
-  }
+  },
+
+  // File dialog operations
+  selectVideoFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectVideo'),
+
+  selectExportPath: (defaultFilename: string): Promise<string | null> =>
+    ipcRenderer.invoke('dialog:selectExportPath', defaultFilename),
+
+  openFolder: (folderPath: string): Promise<void> =>
+    ipcRenderer.invoke('dialog:openFolder', folderPath)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

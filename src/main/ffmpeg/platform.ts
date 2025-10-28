@@ -42,9 +42,16 @@ export function getPlatformInfo(): PlatformInfo {
  */
 export function getFFmpegPath(): string {
   const isDev = process.env.NODE_ENV === 'development'
-  const resourcesPath = isDev
-    ? path.join(__dirname, '../../../resources/ffmpeg')
-    : process.resourcesPath
+  let resourcesPath: string
+
+  if (isDev) {
+    resourcesPath = path.join(__dirname, '../../resources/ffmpeg')
+  } else {
+    // In production, use process.resourcesPath if available, otherwise fallback to development path
+    resourcesPath = process.resourcesPath
+      ? path.join(process.resourcesPath, 'ffmpeg')
+      : path.join(__dirname, '../../resources/ffmpeg')
+  }
 
   const { binaryName } = getPlatformInfo()
   return path.join(resourcesPath, binaryName)
@@ -55,9 +62,16 @@ export function getFFmpegPath(): string {
  */
 export function getFFprobePath(): string {
   const isDev = process.env.NODE_ENV === 'development'
-  const resourcesPath = isDev
-    ? path.join(__dirname, '../../../resources/ffmpeg')
-    : process.resourcesPath
+  let resourcesPath: string
+
+  if (isDev) {
+    resourcesPath = path.join(__dirname, '../../resources/ffmpeg')
+  } else {
+    // In production, use process.resourcesPath if available, otherwise fallback to development path
+    resourcesPath = process.resourcesPath
+      ? path.join(process.resourcesPath, 'ffmpeg')
+      : path.join(__dirname, '../../resources/ffmpeg')
+  }
 
   const { platform, architecture } = getPlatformInfo()
   let binaryName: string

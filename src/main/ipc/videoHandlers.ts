@@ -1,4 +1,4 @@
-import { ipcMain, IpcMainInvokeEvent } from 'electron'
+import { ipcMain, IpcMainInvokeEvent, dialog } from 'electron'
 import { getVideoMetadata, getVideoThumbnail } from '../ffmpeg/metadata'
 import { trimAndExport, convertVideo, ExportProgress } from '../ffmpeg/operations'
 import { VideoMetadata } from '../../types/video'
@@ -117,6 +117,63 @@ export function registerVideoHandlers(): void {
       }
     }
   )
+
+  // File dialog for video selection
+  ipcMain.handle('dialog:selectVideo', async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        filters: [
+          { name: 'Videos', extensions: ['mp4', 'mov', 'webm', 'avi', 'mkv'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        title: 'Select Video File'
+      })
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return null
+      }
+
+      return result.filePaths[0]
+    } catch (error) {
+      console.error('Failed to open file dialog:', error)
+      throw error
+    }
+  })
+
+  // File dialog for export path selection
+  ipcMain.handle('dialog:selectExportPath', async (_, defaultFilename: string) => {
+    try {
+      const result = await dialog.showSaveDialog({
+        defaultPath: defaultFilename,
+        filters: [
+          { name: 'MP4 Videos', extensions: ['mp4'] },
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        title: 'Save Exported Video'
+      })
+
+      if (result.canceled || !result.filePath) {
+        return null
+      }
+
+      return result.filePath
+    } catch (error) {
+      console.error('Failed to open save dialog:', error)
+      throw error
+    }
+  })
+
+  // Open folder in file explorer
+  ipcMain.handle('dialog:openFolder', async (_, folderPath: string) => {
+    try {
+      const { shell } = require('electron')
+      await shell.openPath(folderPath)
+    } catch (error) {
+      console.error('Failed to open folder:', error)
+      throw error
+    }
+  })
 }
 
 /**
@@ -127,4 +184,7 @@ export function unregisterVideoHandlers(): void {
   ipcMain.removeAllListeners('video:getThumbnail')
   ipcMain.removeAllListeners('video:trimExport')
   ipcMain.removeAllListeners('video:convert')
+  ipcMain.removeAllListeners('dialog:selectVideo')
+  ipcMain.removeAllListeners('dialog:selectExportPath')
+  ipcMain.removeAllListeners('dialog:openFolder')
 }

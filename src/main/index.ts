@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, protocol } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -14,7 +14,12 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true,
+      allowFileAccess: true,
+      allowRunningInsecureContent: false
     }
   })
 
@@ -36,10 +41,38 @@ function createWindow(): void {
   }
 }
 
+// Register custom scheme privileges BEFORE app is ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'clipforge',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+      bypassCSP: true
+    }
+  }
+])
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Map clipforge:// absolute paths to real files
+  protocol.registerFileProtocol('clipforge', (request, callback) => {
+    try {
+      const url = request.url
+      // clipforge:///Users/.. → /Users/..
+      const filePath = decodeURIComponent(url.replace('clipforge://', ''))
+      callback({ path: filePath })
+    } catch (e) {
+      console.error('clipforge protocol error:', e)
+      callback({ path: '' })
+    }
+  })
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
