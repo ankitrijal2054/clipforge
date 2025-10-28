@@ -84,3 +84,12 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+resources/ffmpeg/ffmpeg-linux
+resources/ffmpeg/ffmpeg-mac-arm64
+resources/ffmpeg/ffmpeg-mac-x64
+resources/ffmpeg/ffprobe-linux
+resources/ffmpeg/ffmpeg-win.exe
+resources/ffmpeg/ffprobe-mac-arm64
+resources/ffmpeg/ffprobe-mac-x64
+resources/ffmpeg/ffprobe-win.exe
