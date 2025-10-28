@@ -7,6 +7,7 @@
 
 import { registerVideoHandlers } from './videoHandlers'
 import { registerExportHandlers } from './exportHandlers'
+import './recordingHandlers' // Import to register handlers
 
 /**
  * Register all IPC handlers
@@ -14,7 +15,7 @@ import { registerExportHandlers } from './exportHandlers'
 export function registerIpcHandlers(): void {
   registerVideoHandlers()
   registerExportHandlers()
-  // Recording handlers are already registered via ipcMain.handle() calls
+  // Recording handlers are already registered via ipcMain.handle() calls in recordingHandlers.ts
   console.log('Recording IPC handlers registered')
 }
 

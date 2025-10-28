@@ -1,4 +1,4 @@
-// Recording hook for React components
+// Recording hook for React components - UPDATED for webcam support
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type {
   ScreenSource,
@@ -15,6 +15,11 @@ export interface UseRecordingOptions {
   onStateChanged?: (state: RecordingState) => void
 }
 
+export interface WebcamDevice {
+  deviceId: string
+  label: string
+}
+
 export function useRecording(options: UseRecordingOptions = {}) {
   const [isRecording, setIsRecording] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
@@ -23,10 +28,14 @@ export function useRecording(options: UseRecordingOptions = {}) {
   const [quality, setQuality] = useState<RecordingOptions['quality']>('medium')
   const [error, setError] = useState<string | null>(null)
   const [screenSources, setScreenSources] = useState<ScreenSource[]>([])
+  const [webcamDevices, setWebcamDevices] = useState<WebcamDevice[]>([])
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([])
   const [selectedSource, setSelectedSource] = useState<string | null>(null)
+  const [selectedWebcam, setSelectedWebcam] = useState<string | null>(null)
   const [selectedAudioDevice, setSelectedAudioDevice] = useState<string | null>(null)
   const [qualitySettings, setQualitySettings] = useState<Record<string, RecordingQuality>>({})
+  const [cameraPermission, setCameraPermission] = useState(false)
+  const [microphonePermission, setMicrophonePermission] = useState(false)
 
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const unsubscribeRef = useRef<(() => void) | null>(null)
@@ -51,6 +60,27 @@ export function useRecording(options: UseRecordingOptions = {}) {
       options.onRecordingError?.(new Error(errorMessage))
     }
   }, [selectedSource, options])
+
+  // Load webcam devices
+  const loadWebcamDevices = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const videoInputs = devices
+        .filter((d) => d.kind === 'videoinput')
+        .map((d) => ({
+          deviceId: d.deviceId,
+          label: d.label || `Camera ${d.deviceId.substring(0, 5)}`
+        }))
+      setWebcamDevices(videoInputs)
+
+      // Auto-select first webcam if available
+      if (videoInputs.length > 0 && !selectedWebcam) {
+        setSelectedWebcam(videoInputs[0].deviceId)
+      }
+    } catch (err) {
+      console.error('Failed to load webcam devices:', err)
+    }
+  }, [selectedWebcam])
 
   // Load audio devices
   const loadAudioDevices = useCallback(async () => {
@@ -80,12 +110,40 @@ export function useRecording(options: UseRecordingOptions = {}) {
     }
   }, [])
 
+  // Check and request permissions
+  const checkPermissions = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      })
+
+      // Stop all tracks immediately
+      stream.getTracks().forEach((track) => track.stop())
+
+      setCameraPermission(true)
+      setMicrophonePermission(true)
+    } catch (err) {
+      console.error('Permission check failed:', err)
+      setCameraPermission(false)
+      setMicrophonePermission(false)
+    }
+  }, [])
+
   // Initialize
   useEffect(() => {
     loadScreenSources()
+    loadWebcamDevices()
     loadAudioDevices()
     loadQualitySettings()
-  }, [loadScreenSources, loadAudioDevices, loadQualitySettings])
+    checkPermissions()
+  }, [
+    loadScreenSources,
+    loadWebcamDevices,
+    loadAudioDevices,
+    loadQualitySettings,
+    checkPermissions
+  ])
 
   // Subscribe to recording state changes
   useEffect(() => {
@@ -142,15 +200,23 @@ export function useRecording(options: UseRecordingOptions = {}) {
     try {
       setError(null)
 
-      // Validate inputs
+      // Validate inputs based on recording type
       if (recordingType === 'screen' && !selectedSource) {
         throw new Error('Please select a screen source')
+      }
+
+      if (recordingType === 'webcam' && !selectedWebcam) {
+        throw new Error('Please select a webcam device')
+      }
+
+      if (recordingType === 'webcam' && !cameraPermission) {
+        throw new Error('Camera permission denied. Please enable camera access.')
       }
 
       const recordingOptions: RecordingOptions = {
         type: recordingType || 'screen',
         quality,
-        sourceId: selectedSource || undefined,
+        sourceId: recordingType === 'screen' && selectedSource ? selectedSource : undefined,
         audioDeviceId: selectedAudioDevice || undefined
       }
 
@@ -168,7 +234,15 @@ export function useRecording(options: UseRecordingOptions = {}) {
       setError(errorMessage)
       options.onRecordingError?.(new Error(errorMessage))
     }
-  }, [recordingType, quality, selectedSource, selectedAudioDevice, options])
+  }, [
+    recordingType,
+    quality,
+    selectedSource,
+    selectedWebcam,
+    selectedAudioDevice,
+    cameraPermission,
+    options
+  ])
 
   // Stop recording
   const stopRecording = useCallback(async () => {
@@ -249,10 +323,14 @@ export function useRecording(options: UseRecordingOptions = {}) {
     quality,
     error,
     screenSources,
+    webcamDevices,
     audioDevices,
     selectedSource,
+    selectedWebcam,
     selectedAudioDevice,
     qualitySettings,
+    cameraPermission,
+    microphonePermission,
 
     // Actions
     startRecording,
@@ -265,8 +343,11 @@ export function useRecording(options: UseRecordingOptions = {}) {
     setRecordingType,
     setQuality,
     setSelectedSource,
+    setSelectedWebcam,
     setSelectedAudioDevice,
     loadScreenSources,
-    loadAudioDevices
+    loadWebcamDevices,
+    loadAudioDevices,
+    checkPermissions
   }
 }
