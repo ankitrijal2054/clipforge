@@ -3,7 +3,6 @@ import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
 import { PreviewPlayer } from './PreviewPlayer'
 import { Timeline } from './Timeline'
-import { TrimControls } from './TrimControls'
 import { useEditorStore } from '../../../stores/editorStore'
 
 /**
@@ -117,16 +116,6 @@ export function Layout() {
               transition={{ duration: 0.3, delay: 0.1 }}
             >
               <Timeline />
-            </motion.div>
-
-            {/* Trim Controls - fixed height, responsive width */}
-            <motion.div
-              className="flex-shrink-0"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-            >
-              <TrimControls />
             </motion.div>
           </div>
         )}

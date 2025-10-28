@@ -7,6 +7,8 @@ import { useTrimHandle } from '../../../stores/editorStore'
 import { useTrimActions } from '../../../stores/editorStore'
 import { formatDuration } from '../../../utils/formatters'
 import { Button } from '../../../components/ui/button'
+import { RotateCcw } from 'lucide-react'
+import { useEditorStore } from '../../../stores/editorStore'
 
 /**
  * Timeline component for video editing
@@ -272,42 +274,63 @@ export function Timeline() {
   return (
     <div className="w-full space-y-4">
       {/* Timeline Controls */}
-      <div className="flex items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={handleZoomOut}
-            variant="ghost"
-            size="sm"
-            className="text-gray-400 hover:text-white hover:bg-gray-700 h-8 w-8 p-0"
-            title="Zoom out (Ctrl + Scroll)"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </Button>
-          <span className="text-xs text-gray-400 min-w-fit">{Math.round(zoomLevel * 100)}%</span>
-          <Button
-            onClick={handleZoomIn}
-            variant="ghost"
-            size="sm"
-            className="text-gray-400 hover:text-white hover:bg-gray-700 h-8 w-8 p-0"
-            title="Zoom in (Ctrl + Scroll)"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </Button>
+      <div className="flex flex-col gap-4">
+        {/* Zoom Controls and Trim Info */}
+        <div className="flex items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleZoomOut}
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white hover:bg-gray-700 h-8 w-8 p-0"
+              title="Zoom out (Ctrl + Scroll)"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+            <span className="text-xs text-gray-400 min-w-fit">{Math.round(zoomLevel * 100)}%</span>
+            <Button
+              onClick={handleZoomIn}
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white hover:bg-gray-700 h-8 w-8 p-0"
+              title="Zoom in (Ctrl + Scroll)"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-4 text-sm text-gray-400">
+            <div>
+              <span>Start: </span>
+              <span className="text-white font-medium">{formatDuration(trimStart)}</span>
+            </div>
+            <div>
+              <span>Duration: </span>
+              <span className="text-white font-medium">{formatDuration(trimEnd - trimStart)}</span>
+            </div>
+            <div>
+              <span>End: </span>
+              <span className="text-white font-medium">{formatDuration(trimEnd)}</span>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4 text-sm text-gray-400">
-          <div>
-            <span>Start: </span>
-            <span className="text-white font-medium">{formatDuration(trimStart)}</span>
-          </div>
-          <div>
-            <span>Duration: </span>
-            <span className="text-white font-medium">{formatDuration(trimEnd - trimStart)}</span>
-          </div>
-          <div>
-            <span>End: </span>
-            <span className="text-white font-medium">{formatDuration(trimEnd)}</span>
-          </div>
+        {/* Trim Point Display and Reset Button */}
+        <div className="flex items-center justify-between px-4">
+          <h3 className="text-sm font-semibold text-white">Trim Points</h3>
+          <Button
+            onClick={() => {
+              const { resetTrim } = useEditorStore.getState()
+              resetTrim()
+            }}
+            variant="ghost"
+            size="sm"
+            className="text-gray-400 hover:text-white hover:bg-gray-700 h-7 px-2 text-xs"
+            title="Reset trim to full video (R)"
+          >
+            <RotateCcw className="w-3 h-3 mr-1" />
+            Reset
+          </Button>
         </div>
       </div>
 
