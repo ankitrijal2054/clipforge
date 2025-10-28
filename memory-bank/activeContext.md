@@ -2,11 +2,14 @@
 
 ## Current Work Focus
 
-**Phase 5: Timeline UI** - ✅ COMPLETE - Fully responsive timeline component with playhead, zoom, pan, and click-to-seek functionality.
+**Phase 5: Timeline UI** - ✅ COMPLETE & FIXED - Fully responsive timeline component with playhead, zoom, pan, and click-to-seek functionality. Fixed infinite loop issue and responsive fit-to-screen behavior.
 
 ## Recent Changes
 
 - ✅ **Phase 5 Complete**: Timeline UI fully implemented and integrated
+- ✅ **Fixed Infinite Loop Bug**: Refactored Zustand selectors to return stable references
+- ✅ **Fixed Responsive Timeline**: Timeline now fits entire video on screen at 1x zoom
+- ✅ **Default 100% Zoom**: Set zoom to 100% (1x) when video is uploaded
 - ✅ **Store Enhancement**: Added setZoomLevel and setTimelineScrollOffset actions
 - ✅ **Timeline Component**: Created responsive Timeline with all features
 - ✅ **Layout Integration**: Integrated Timeline into main editing view
@@ -147,8 +150,11 @@ useEffect(() => {
   return () => resizeObserver.disconnect()
 }, [])
 
-// Pixels per second calculated from container and zoom
-const pixelsPerSecond = Math.max(40, (containerWidth * zoomLevel) / duration)
+// Base pixels per second (fits entire video at 1x zoom)
+const basePixelsPerSecond = containerWidth / duration
+
+// Zoom multiplier applied to base
+const pixelsPerSecond = basePixelsPerSecond * zoomLevel
 ```
 
 ### Coordinate System
@@ -168,6 +174,83 @@ const setZoomLevel = (zoomLevel: number) =>
     zoomLevel: Math.max(0.5, Math.min(10, zoomLevel))
   })
 ```
+
+## Bug Fixes Applied
+
+### 1. Infinite Loop Bug (Fixed)
+
+**Problem**: React error "Maximum update depth exceeded" when uploading videos.
+
+**Root Cause**: Zustand selector hooks were creating new objects on every render:
+
+```typescript
+// ❌ BAD - Creates new object every render, causes re-render loop
+const useTimelineActions = () =>
+  useEditorStore((state) => ({
+    setPlayhead: state.setPlayhead,
+    setZoomLevel: state.setZoomLevel
+    // ... more properties
+  }))
+```
+
+**Solution**: Return stable references by using individual selectors:
+
+```typescript
+// ✅ GOOD - Stable references, no infinite loop
+const useTimelineActions = () => {
+  const setPlayhead = useEditorStore((state) => state.setPlayhead)
+  const setZoomLevel = useEditorStore((state) => state.setZoomLevel)
+
+  return { setPlayhead, setZoomLevel }
+}
+```
+
+**Applied To**:
+
+- `useTimeline()` - State selector
+- `usePlayback()` - State selector
+- `useTrim()` - State selector
+- `useExport()` - State selector
+- `useUI()` - State selector
+- `useMediaActions()` - Action selector
+- `usePlaybackActions()` - Action selector
+- `useTrimActions()` - Action selector
+- `useTimelineActions()` - Action selector
+- `useExportActions()` - Action selector
+- `useUIActions()` - Action selector
+
+### 2. Responsive Timeline Fit-to-Screen (Fixed)
+
+**Problem**: Timeline was scrollable even for 4-minute videos due to enforced 40px/second minimum.
+
+**Root Cause**:
+
+```typescript
+// ❌ BAD - Minimum 40px/sec makes short videos too wide
+// 4 minutes = 240 seconds
+// 240 × 40 = 9,600px (only ~1,200px available!)
+const pixelsPerSecond = Math.max(40, (containerWidth * zoomLevel) / duration)
+```
+
+**Solution**: Calculate base fit-to-screen, then apply zoom multiplier:
+
+```typescript
+// ✅ GOOD - Entire video fits at 1x zoom
+const basePixelsPerSecond = containerWidth / duration
+// For 4-min video: 1,200 / 240 = 5 px/sec
+// Total width: 240 × 5 = 1,200px (fits perfectly!)
+
+const pixelsPerSecond = basePixelsPerSecond * zoomLevel
+// At 2x zoom: 5 × 2 = 10 px/sec (2,400px, needs scroll)
+// At 0.5x: 5 × 0.5 = 2.5 px/sec (600px, half screen)
+```
+
+**Behavior**:
+
+- **1x zoom (default)**: Entire video visible without scrolling
+- **2x zoom**: Timeline 2× larger, horizontal scroll appears
+- **10x zoom**: Fine-grained scrubbing, scroll through timeline
+- **Auto-reset**: Selecting new video resets to 1x zoom
 
 ## Layout Structure
 

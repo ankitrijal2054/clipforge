@@ -49,7 +49,9 @@ export const useEditorStore = create<EditorStore>()(
             selectedClip: clip,
             duration: clip.duration,
             trimEnd: clip.duration,
-            importHistory: [...state.importHistory, clip.path]
+            importHistory: [...state.importHistory, clip.path],
+            zoomLevel: 1,
+            timelineScrollOffset: 0
           })),
 
         selectClip: (id: string) =>

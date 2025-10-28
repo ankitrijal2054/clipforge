@@ -61,12 +61,20 @@ export function Timeline() {
     return () => resizeObserver.disconnect()
   }, [])
 
-  // Calculate pixels per second based on zoom and container width
-  const pixelsPerSecond = useMemo(() => {
+  // Calculate base pixels per second (to fit entire video in container at 1x zoom)
+  const basePixelsPerSecond = useMemo(() => {
     if (duration === 0 || containerWidth === 0) return 1
-    // Minimum 40px per second for usability
-    return Math.max(40, (containerWidth * zoomLevel) / duration)
-  }, [duration, zoomLevel, containerWidth])
+    // Calculate pixels per second so entire video fits in container at zoom level 1
+    return containerWidth / duration
+  }, [duration, containerWidth])
+
+  // Apply zoom multiplier to base pixels per second
+  const pixelsPerSecond = useMemo(() => {
+    // Zoom level 1 = fit entire video in container
+    // Zoom level 2 = twice as large (half fits in container, needs scroll)
+    // Zoom level 0.5 = half as large (could fit 2 videos worth)
+    return Math.max(1, basePixelsPerSecond * zoomLevel)
+  }, [basePixelsPerSecond, zoomLevel])
 
   // Calculate total timeline width including zoom
   const totalTimelineWidth = useMemo(() => {
