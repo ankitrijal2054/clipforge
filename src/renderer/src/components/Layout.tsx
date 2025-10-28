@@ -1,32 +1,34 @@
-import React from 'react'
 import { motion } from 'framer-motion'
 import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
 import { PreviewPlayer } from './PreviewPlayer'
+import { Timeline } from './Timeline'
 import { useEditorStore } from '../../../stores/editorStore'
 
 /**
  * Layout component for the main application interface
  *
  * Features:
- * - Responsive layout
+ * - Responsive layout with sidebar
  * - Sidebar with media library
- * - Main content area
+ * - Main content area with video preview
+ * - Timeline component below preview
  * - Smooth transitions
+ * - Proper responsive spacing ensuring nothing goes out of bounds
  */
 export function Layout() {
   const { clips } = useEditorStore()
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
-      {/* Sidebar */}
+    <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
+      {/* Sidebar - fixed width, scrollable */}
       <motion.div
-        className="w-80 bg-gray-800/95 backdrop-blur-sm border-r border-gray-700 flex flex-col shadow-xl"
+        className="w-80 bg-gray-800/95 backdrop-blur-sm border-r border-gray-700 flex flex-col shadow-xl overflow-hidden"
         initial={{ x: -320 }}
         animate={{ x: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
-        <div className="p-6 border-b border-gray-700">
+        <div className="p-6 border-b border-gray-700 flex-shrink-0">
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">C</span>
@@ -36,17 +38,18 @@ export function Layout() {
           <p className="text-sm text-gray-400">Professional Video Trimming</p>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        {/* Sidebar Content - scrollable if needed */}
+        <div className="flex-1 overflow-y-auto min-h-0">
           {clips.length === 0 ? (
             <div className="p-4">
               <ImportManager />
             </div>
           ) : (
             <div className="p-4 h-full flex flex-col">
-              <div className="mb-4">
+              <div className="mb-4 flex-shrink-0">
                 <ImportManager />
               </div>
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <MediaLibrary />
               </div>
             </div>
@@ -54,10 +57,11 @@ export function Layout() {
         </div>
       </motion.div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col bg-gray-900">
+      {/* Main Content Area - flex column that fills remaining space */}
+      <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
         {clips.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center p-12">
+          // Welcome state
+          <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
             <motion.div
               className="text-center max-w-2xl"
               initial={{ opacity: 0, y: 20 }}
@@ -92,14 +96,26 @@ export function Layout() {
             </motion.div>
           </div>
         ) : (
-          <div className="flex-1 p-8">
+          // Main editing view with video and timeline
+          <div className="flex-1 flex flex-col overflow-hidden p-8 gap-6">
+            {/* Video Preview - takes priority space */}
             <motion.div
-              className="h-full"
+              className="flex-1 min-h-0"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
               <PreviewPlayer />
+            </motion.div>
+
+            {/* Timeline - fixed height, responsive width */}
+            <motion.div
+              className="flex-shrink-0"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <Timeline />
             </motion.div>
           </div>
         )}

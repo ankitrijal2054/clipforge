@@ -16,8 +16,18 @@ export function useVideoPlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   // Get state and actions from store
-  const { selectedClip, isPlaying, playhead, volume, isMuted, setPlayhead, togglePlayback } =
-    useEditorStore()
+  const {
+    selectedClip,
+    isPlaying,
+    playhead,
+    volume,
+    isMuted,
+    trimStart,
+    trimEnd,
+    duration,
+    setPlayhead,
+    togglePlayback
+  } = useEditorStore()
 
   // Sync video time with store playhead
   const handleTimeUpdate = useCallback(() => {
@@ -54,6 +64,36 @@ export function useVideoPlayer() {
       video.currentTime = playhead
     }
   }, [playhead])
+
+  // Sync playhead to trimStart when trim start changes
+  useEffect(() => {
+    // Only sync when we're at the start or before it
+    if (playhead < trimStart) {
+      setPlayhead(trimStart)
+    }
+  }, [trimStart, playhead, setPlayhead])
+
+  // Constrain playback to trim region (stop at trimEnd)
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const handleTimeUpdate = () => {
+      if (isPlaying && video.currentTime >= trimEnd) {
+        video.pause()
+        togglePlayback()
+        setPlayhead(trimEnd)
+      }
+    }
+
+    if (isPlaying) {
+      video.addEventListener('timeupdate', handleTimeUpdate)
+    }
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+    }
+  }, [isPlaying, trimEnd, togglePlayback, setPlayhead])
 
   // Sync playback state with video element
   useEffect(() => {
