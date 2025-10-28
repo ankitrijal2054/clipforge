@@ -28,6 +28,13 @@ export const createPersistenceStorage = (): StateStorage => ({
       const item = localStorage.getItem(name)
       if (!item) return null
 
+      // Check if the item is already a stringified object (corrupted data)
+      if (item === '[object Object]') {
+        console.warn('Corrupted data found in localStorage, clearing...')
+        localStorage.removeItem(name)
+        return null
+      }
+
       const parsed = JSON.parse(item)
 
       // Only return persisted keys
@@ -41,6 +48,12 @@ export const createPersistenceStorage = (): StateStorage => ({
       return Object.keys(persistedState).length > 0 ? JSON.stringify(persistedState) : null
     } catch (error) {
       console.error('Failed to load persisted state:', error)
+      // Clear corrupted data
+      try {
+        localStorage.removeItem(name)
+      } catch (clearError) {
+        console.error('Failed to clear corrupted data:', clearError)
+      }
       return null
     }
   },
