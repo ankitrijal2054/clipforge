@@ -2,6 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
+import { PreviewPlayer } from './PreviewPlayer'
 import { useEditorStore } from '../../../stores/editorStore'
 
 /**
@@ -50,33 +51,36 @@ export function Layout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        <div className="flex-1 flex items-center justify-center p-8">
-          <motion.div
-            className="text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <h2 className="text-3xl font-bold text-white mb-4">Welcome to ClipForge</h2>
-            <p className="text-lg text-gray-400 mb-8 max-w-md">
-              Import your videos and start trimming with professional precision
-            </p>
-
-            {clips.length === 0 ? (
+        {clips.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center p-8">
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <h2 className="text-3xl font-bold text-white mb-4">Welcome to ClipForge</h2>
+              <p className="text-lg text-gray-400 mb-8 max-w-md">
+                Import your videos and start trimming with professional precision
+              </p>
               <div className="text-gray-500">
                 <p>No videos imported yet</p>
                 <p className="text-sm mt-2">Use the sidebar to import your first video</p>
               </div>
-            ) : (
-              <div className="text-gray-500">
-                <p>
-                  {clips.length} video{clips.length !== 1 ? 's' : ''} imported
-                </p>
-                <p className="text-sm mt-2">Select a video from the sidebar to start editing</p>
-              </div>
-            )}
-          </motion.div>
-        </div>
+            </motion.div>
+          </div>
+        ) : (
+          <div className="flex-1 p-6">
+            <motion.div
+              className="h-full"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <PreviewPlayer />
+            </motion.div>
+          </div>
+        )}
       </div>
     </div>
   )
