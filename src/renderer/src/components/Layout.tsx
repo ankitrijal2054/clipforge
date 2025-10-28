@@ -60,6 +60,25 @@ export function Layout() {
             </div>
           )}
         </div>
+
+        {/* Export Button - fixed at bottom */}
+        {clips.length > 0 && (
+          <motion.div
+            className="flex-shrink-0 px-4 py-3 border-t border-gray-700"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Button
+              onClick={() => setActiveModal('export')}
+              disabled={!selectedClip}
+              className="w-full text-xs py-1.5"
+            >
+              <Download className="w-3 h-3 mr-2" />
+              Export
+            </Button>
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Main Content Area - flex column that fills remaining space */}
@@ -121,23 +140,6 @@ export function Layout() {
               transition={{ duration: 0.3, delay: 0.1 }}
             >
               <Timeline />
-            </motion.div>
-
-            {/* Export Button Row - fixed height, responsive width */}
-            <motion.div
-              className="flex-shrink-0 px-0 py-4 border-t border-gray-700"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-            >
-              <Button
-                onClick={() => setActiveModal('export')}
-                disabled={!selectedClip}
-                className="w-full"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export Trimmed Video
-              </Button>
             </motion.div>
           </div>
         )}
