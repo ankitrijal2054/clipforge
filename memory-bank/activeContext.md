@@ -14,8 +14,10 @@
 - ✅ **Removed Duplication**: Deleted separate TrimControls component for cleaner UI
 - ✅ **Layout Simplification**: Timeline now includes all trim functionality in one box
 - ✅ **Keyboard Support**: I/O/R keys already configured for trim control
-- ✅ **Visual Feedback**: Handles change color on hover and drag (blue-400 → blue-500)
-- ✅ **Responsive Design**: All components stay within viewport bounds
+- ✅ **Playhead Sync**: Playhead follows when dragging trim START handle (not end)
+- ✅ **Trim-Aware Playback**: Video automatically stops at trimEnd during playback
+- ✅ **Intelligent Boundaries**: Playhead syncs to trimStart if adjusted below it
+- ✅ **Professional Behavior**: Implements industry-standard trim-constrained playback
 
 ## Current Status
 

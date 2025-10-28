@@ -192,6 +192,8 @@ export function Timeline() {
 
       if (activeHandle === 'start') {
         updateTrimStart(clampedTime)
+        // Sync playhead to follow trim start
+        setPlayhead(clampedTime)
       } else {
         updateTrimEnd(clampedTime)
       }
@@ -217,7 +219,8 @@ export function Timeline() {
     updateTrimStart,
     updateTrimEnd,
     setActiveHandle,
-    setIsDragging
+    setIsDragging,
+    setPlayhead
   ])
 
   // Handle playhead mouse down
