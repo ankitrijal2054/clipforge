@@ -1,6 +1,5 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback } from 'react'
 import { useEditorStore } from '../stores/editorStore'
-import { ExportProgress } from '../types/video'
 
 /**
  * Custom hook for export functionality
@@ -19,7 +18,6 @@ export function useExport() {
     isExporting,
     exportProgress,
     exportSettings,
-    startExport,
     setActiveModal
   } = useEditorStore()
 
@@ -50,11 +48,8 @@ export function useExport() {
           throw new Error('No video selected')
         }
 
-        // Set up progress listener
-        const progressListener = (progress: ExportProgress) => {
-          // Progress is already handled by the store
-          console.log(`Export progress: ${progress.progress.toFixed(1)}%`)
-        }
+        // Progress is already handled by the store
+        console.log('Starting export...')
 
         // Call the IPC handler for video export
         const result = await window.api.trimExport({

@@ -1,6 +1,6 @@
-import React, { useCallback } from 'react'
+import { useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { FileVideo, Play, Trash2, Eye } from 'lucide-react'
+import { FileVideo, Play, Trash2 } from 'lucide-react'
 import { useEditorStore } from '../../../stores/editorStore'
 import { formatDuration, formatFileSize, formatResolution } from '../../../utils/formatters'
 import { useToast } from '../../../hooks/use-toast'

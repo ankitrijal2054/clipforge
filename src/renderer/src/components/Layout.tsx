@@ -109,7 +109,7 @@ export function Layout() {
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Or use the "Browse Files" button to select videos</span>
+                    <span>Or use the "Browse" button to select videos</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>

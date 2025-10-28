@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { EditorStore } from '../types/store'
-import { VideoClip, TimelineClip, ExportSettings } from '../types/video'
+import { VideoClip, ExportSettings } from '../types/video'
 import { createPersistenceStorage } from './persistence'
 
 /**
@@ -215,7 +215,7 @@ export const useEditorStore = create<EditorStore>()(
       }),
       {
         name: 'clipforge-editor-store',
-        storage: createPersistenceStorage(),
+        storage: createPersistenceStorage() as any,
         partialize: (state) => ({
           importHistory: state.importHistory,
           exportSettings: state.exportSettings,

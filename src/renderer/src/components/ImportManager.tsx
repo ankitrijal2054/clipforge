@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Upload, FileVideo, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, FileVideo, Loader2 } from 'lucide-react'
 import { useEditorStore } from '../../../stores/editorStore'
 import { isValidVideoFile } from '../../../utils/validators'
 import { VideoClip } from '../../../types/video'

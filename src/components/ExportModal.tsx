@@ -33,7 +33,7 @@ type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
  * - All inputs: full width, responsive padding
  * - Buttons: touch-friendly (min-h-10)
  */
-export function ExportModal(): JSX.Element | null {
+export function ExportModal(): React.JSX.Element | null {
   // Store state
   const { selectedClip, isExporting, exportProgress, activeModal, setActiveModal } =
     useEditorStore()
@@ -66,7 +66,7 @@ export function ExportModal(): JSX.Element | null {
    */
   const handleBrowse = async (): Promise<void> => {
     try {
-      const selectedPath = await (window.electronAPI as any).selectExportPath(filename)
+      const selectedPath = await window.api.selectExportPath(filename)
       if (selectedPath) {
         setExportPath(selectedPath)
         setErrorMessage('')
@@ -138,7 +138,7 @@ export function ExportModal(): JSX.Element | null {
   const handleOpenFolder = async (): Promise<void> => {
     try {
       const folderPath = exportPath.substring(0, exportPath.lastIndexOf('/'))
-      await (window.electronAPI as any).openFolder(folderPath)
+      await window.api.openFolder(folderPath)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Failed to open folder')
     }

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Play,
@@ -64,7 +64,7 @@ export function PreviewPlayer() {
   } = useEditorStore()
 
   // Use video player hook (provides the videoRef wired with playback logic)
-  const { videoRef, seekTo, skip, isReady } = useVideoPlayer()
+  const { videoRef, seekTo, skip } = useVideoPlayer()
 
   // Use keyboard shortcuts
   useKeyboardShortcuts()
@@ -140,6 +140,7 @@ export function PreviewPlayer() {
     } else {
       setShowControls(true)
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
+      return undefined
     }
   }, [isFullscreen])
 
