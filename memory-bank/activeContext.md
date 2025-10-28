@@ -2,178 +2,208 @@
 
 ## Current Work Focus
 
-**Phase 2: State Management** - Implementing comprehensive state management with Zustand store and custom hooks for the video editing interface.
+**Phase 5: Timeline UI** - ✅ COMPLETE - Fully responsive timeline component with playhead, zoom, pan, and click-to-seek functionality.
 
 ## Recent Changes
 
-- ✅ **Phase 0.1 Complete**: Project foundation fully established
-- ✅ **Project Structure**: All directories and files created
-- ✅ **ShadCN/UI Setup**: Professional UI components installed and configured
-- ✅ **Type Definitions**: Comprehensive TypeScript interfaces created
-- ✅ **Utility Functions**: Formatters, validators, and constants implemented
-- ✅ **Code Style**: Consistent formatting with single quotes and no semicolons
+- ✅ **Phase 5 Complete**: Timeline UI fully implemented and integrated
+- ✅ **Store Enhancement**: Added setZoomLevel and setTimelineScrollOffset actions
+- ✅ **Timeline Component**: Created responsive Timeline with all features
+- ✅ **Layout Integration**: Integrated Timeline into main editing view
+- ✅ **Responsive Design**: All components fit within screen bounds
 
 ## Current Status
 
-- **Foundation**: Solid and ready for development
-- **Dependencies**: All installed and working
-- **Configuration**: Properly configured for development
-- **App State**: Running successfully in development mode
-- **Next Phase**: Ready to begin FFmpeg integration
+- **Phase 5**: Timeline UI ✅ COMPLETE
+- **Implementation**: Production-ready with all features
+- **Testing**: Ready for manual testing with real videos
+- **Next Phase**: Phase 6 - Trim Controls (draggable handles on timeline)
 
 ## Active Decisions and Considerations
 
-### 1. FFmpeg Integration Strategy
+### 1. Timeline Responsiveness Strategy
 
-- **Approach**: Bundled static binaries for all platforms
-- **Rationale**: Zero external dependencies, offline functionality
-- **Implementation**: Platform detection + child process execution
-- **Priority**: Critical - entire app depends on this
+- **Container-based Sizing**: Uses ResizeObserver for responsive width
+- **Minimum Heights**: Fixed height of 120px for playback area
+- **Flexible Layout**: Main flex layout with timeline as flex-shrink-0
+- **Overflow Management**: Scroll within timeline, nothing goes outside bounds
 
-### 2. IPC Architecture
+### 2. Playhead Synchronization
 
-- **Pattern**: Type-safe IPC with contextBridge
-- **Security**: Context isolation enabled, node integration disabled
-- **APIs**: Video metadata, trim/export, file dialogs, progress tracking
+- **Single Source of Truth**: Store's playhead is canonical
+- **Bi-directional Sync**:
+  - Video player → updates store → timeline reacts
+  - Timeline click/drag → updates store → video reacts
+- **No Local State**: Timeline never maintains its own playhead
 
-### 3. State Management
+### 3. Zoom & Pan Implementation
 
-- **Store**: Zustand with comprehensive EditorStore interface
-- **Pattern**: Immutable state with pure action functions
-- **Features**: Media management, timeline, playback, trim, export
+- **Zoom Levels**: 0.5x to 10x (safely clamped)
+- **Pan**: Horizontal scroll when zoomed beyond container width
+- **Automatic Markers**: Interval adjusts based on duration and zoom
+- **Minimum Pixels**: 40px per second for usability, 60px between markers
 
-### 4. UI/UX Approach
+### 4. Performance Optimizations
 
-- **Design System**: ShadCN/UI with custom Tailwind configuration
-- **Theme**: Dark mode with professional color palette
-- **Animations**: Framer Motion for smooth interactions
-- **Accessibility**: WCAG 2.1 AA compliance planned
+- **useMemo**: Time markers, pixelsPerSecond, and totalTimelineWidth
+- **CSS Transforms**: Playhead uses left property (GPU accelerated)
+- **Event Delegation**: Single click handler on track, delegated to items
+- **Debounced Resize**: ResizeObserver only updates on actual size changes
 
 ## Phase 1: FFmpeg Integration ✅ COMPLETE
 
-### 1. FFmpeg Binary Management ✅
-
-- ✅ Created resources/ffmpeg directory structure
-- ✅ Implemented platform detection logic
-- ✅ Created binary validation system
-- ✅ Added comprehensive error handling
-- ✅ Created setup instructions and README
-
-### 2. FFmpeg Operations ✅
-
-- ✅ Implemented metadata extraction (ffprobe)
-- ✅ Created video trimming function
-- ✅ Added progress tracking for exports
-- ✅ Implemented video conversion capabilities
-- ✅ Added thumbnail generation
-- ✅ Comprehensive error handling
-
-### 3. IPC Integration ✅
-
-- ✅ Created IPC handlers in main process
-- ✅ Updated preload script with video APIs
-- ✅ Implemented type-safe communication
-- ✅ Added progress event listeners
-- ✅ Integrated with main process
-
-### 4. Code Structure ✅
-
-- ✅ Created modular FFmpeg utilities
-- ✅ Added comprehensive TypeScript types
-- ✅ Implemented platform-specific path resolution
-- ✅ Added proper error handling and validation
-- ✅ Created clean API interface
+- ✅ FFmpeg binary management
+- ✅ FFmpeg operations (trim, export, metadata)
+- ✅ IPC integration with main process
+- ✅ Code structure and organization
 
 ## Phase 2: State Management ✅ COMPLETE
 
-### 1. Zustand Store Implementation ✅
-
-- ✅ Created comprehensive EditorStore interface
-- ✅ Implemented all state management actions
-- ✅ Added selector hooks for optimized re-renders
-- ✅ Integrated with devtools for debugging
-- ✅ Added state persistence with localStorage
-
-### 2. Custom Hooks ✅
-
-- ✅ Created useVideoPlayer hook for video element management
-- ✅ Implemented useKeyboardShortcuts for keyboard controls
-- ✅ Added useExport hook for export functionality
-- ✅ Created useMediaImport hook for file import operations
-- ✅ Added comprehensive keyboard shortcut help
-
-### 3. State Persistence ✅
-
-- ✅ Implemented localStorage-based persistence
-- ✅ Added selective state persistence (only UI preferences)
-- ✅ Created persistence utilities for debugging
-- ✅ Added error handling for storage operations
+- ✅ Zustand store implementation
+- ✅ Custom hooks for various features
+- ✅ State persistence with localStorage
+- ✅ Optimized selector hooks
 
 ## Phase 3: Import System ✅ COMPLETE
 
-### 1. File Dialog Integration ✅
-
-- ✅ Created IPC handlers for video selection
-- ✅ Added export path selection dialog
-- ✅ Implemented folder opening functionality
-- ✅ Updated preload script with new APIs
-- ✅ Added TypeScript definitions
-
-### 2. Import Manager Component ✅
-
-- ✅ Created ImportManager with drag-and-drop
-- ✅ Added file picker integration
-- ✅ Implemented video validation
-- ✅ Added loading states and error handling
-- ✅ Integrated with toast notifications
-
-### 3. Media Library Component ✅
-
-- ✅ Created MediaLibrary for video display
-- ✅ Added video selection and removal
-- ✅ Implemented metadata display
-- ✅ Added hover effects and animations
-- ✅ Integrated with store state
-
-### 4. App Integration ✅
-
-- ✅ Created Layout component
-- ✅ Updated main App component
-- ✅ Integrated all import system components
-- ✅ Added responsive design
+- ✅ File dialog integration
+- ✅ ImportManager component
+- ✅ MediaLibrary component
+- ✅ App integration
 
 ## Phase 4: Preview Player ✅ COMPLETE
 
-### 1. Preview Player Implementation ✅
-
-- ✅ HTML5 video player component
-- ✅ Custom video controls (play/pause, seek, volume, skip)
-- ✅ Keyboard shortcuts integration
+- ✅ HTML5 video player with custom controls
+- ✅ Play/pause, seek, volume, skip controls
+- ✅ Keyboard shortcuts
 - ✅ Fullscreen support
-- ✅ Volume control
 - ✅ Trim region visualization
-- ✅ Professional UI with smooth animations
 
-## Next Steps (Phase 5)
+## Phase 5: Timeline UI ✅ COMPLETE
 
-### 1. Timeline UI Implementation
+### 1. Store Enhancements ✅
 
-- Timeline component with visual representation
-- Playhead synchronization
-- Click-to-seek functionality
-- Zoom and pan capabilities
-- Time markers and rulers
+- ✅ Added `timelineScrollOffset` state
+- ✅ Added `setZoomLevel` action (0.5x - 10x clamped)
+- ✅ Added `setTimelineScrollOffset` action
+- ✅ Updated `useTimeline` selector with new properties
+- ✅ Created `useTimelineActions` selector hook
+- ✅ Reset zoom/scroll when selecting new clip
+
+### 2. Timeline Component ✅
+
+- ✅ Responsive container using ResizeObserver
+- ✅ Responsive playback area (120px fixed height)
+- ✅ Time ruler with dynamic markers (1s to 1m intervals)
+- ✅ Playhead synchronized with video player
+- ✅ Trim region visualization with dimmed areas
+- ✅ Playhead tooltip showing current time
+
+### 3. Interactive Features ✅
+
+- ✅ Click-to-seek: Click anywhere on timeline to jump to time
+- ✅ Drag playhead: Drag to scrub through video
+- ✅ Zoom in/out: Buttons and Ctrl+Scroll wheel
+- ✅ Pan/scroll: Horizontal scroll when zoomed
+- ✅ Keyboard hints: Tip text at bottom
+
+### 4. Visual Design ✅
+
+- ✅ Gradient background (gray-800 to gray-900)
+- ✅ Blue trim region highlight with borders
+- ✅ Red playhead with circular handle
+- ✅ Hover effects on controls and playhead
+- ✅ Smooth animations (Framer Motion)
+- ✅ Time markers and labels
+- ✅ Full compatibility with dark theme
+
+### 5. Responsive Features ✅
+
+- ✅ Container width tracked with ResizeObserver
+- ✅ Automatic marker interval adjustment
+- ✅ Minimum pixels per second enforced (40px)
+- ✅ Zoom controls with min/max limits
+- ✅ Fixed sidebar (w-80) with content scrolling
+- ✅ Main area flex layout ensuring nothing goes outside bounds
+- ✅ Proper overflow handling (overflow-x-auto only)
+
+## Implementation Highlights
+
+### Responsiveness Strategy
+
+```typescript
+// Container width tracked dynamically
+const [containerWidth, setContainerWidth] = useState(0)
+
+useEffect(() => {
+  const resizeObserver = new ResizeObserver(() => {
+    if (containerRef.current) {
+      setContainerWidth(containerRef.current.offsetWidth)
+    }
+  })
+  if (containerRef.current) {
+    resizeObserver.observe(containerRef.current)
+  }
+  return () => resizeObserver.disconnect()
+}, [])
+
+// Pixels per second calculated from container and zoom
+const pixelsPerSecond = Math.max(40, (containerWidth * zoomLevel) / duration)
+```
+
+### Coordinate System
+
+```typescript
+// Click position relative to track, accounting for scroll
+const rect = trackRef.current.getBoundingClientRect()
+const clickX = e.clientX - rect.left + timelineScrollOffset
+const time = clickX / pixelsPerSecond
+```
+
+### Zoom with Boundary Protection
+
+```typescript
+const setZoomLevel = (zoomLevel: number) =>
+  set({
+    zoomLevel: Math.max(0.5, Math.min(10, zoomLevel))
+  })
+```
+
+## Layout Structure
+
+```
+Layout (full screen flex)
+├── Sidebar (w-80, overflow-hidden)
+│   └── Scrollable content
+└── Main Content (flex-1, overflow-hidden, flex flex-col)
+    ├── Video Welcome OR
+    └── Editing View (flex-1, flex flex-col, overflow-hidden, gap-6)
+        ├── PreviewPlayer (flex-1, min-h-0)
+        └── Timeline (flex-shrink-0)
+```
+
+## Next Steps (Phase 6)
+
+### Trim Controls Implementation
+
+- Create draggable handles for trim start/end
+- Real-time preview as handles are dragged
+- Keyboard shortcuts (I/O keys for in/out points)
+- Visual feedback during drag
+- Snap-to-frame capability (optional)
+- Integration with timeline
 
 ## Current Blockers
 
-- None - ready to proceed with Phase 2
+- None - Timeline UI fully complete and functional
 
-## Risk Mitigation
+## Performance Notes
 
-- **FFmpeg Bundling**: Test early and often
-- **Platform Compatibility**: Verify on each platform
-- **Performance**: Monitor memory usage and processing time
-- **Error Handling**: Comprehensive error recovery
+- ✅ ResizeObserver for responsive sizing (no polling)
+- ✅ useMemo for expensive calculations
+- ✅ Efficient event handlers with proper cleanup
+- ✅ GPU-accelerated transforms (CSS left property)
+- ✅ Minimal re-renders via proper hooks
 
 ## Development Environment
 
@@ -181,25 +211,13 @@
 - **Node.js**: 22.11.0
 - **Package Manager**: npm
 - **IDE**: Cursor with TypeScript support
-- **Git**: Ready for initialization (user will handle)
+- **Git**: Version control ready
 
 ## Code Quality Status
 
-- **TypeScript**: Strict mode enabled
-- **ESLint**: Configured and working
-- **Prettier**: Consistent formatting applied
+- **TypeScript**: Strict mode with proper typing
+- **ESLint**: All new code passes linting
+- **Component Design**: Modular and testable
 - **Code Style**: Single quotes, no semicolons
-- **File Organization**: Clean structure with proper separation
-
-## Ready for Phase 1
-
-The project foundation is complete and ready for FFmpeg integration. All necessary infrastructure is in place:
-
-- Project structure ✅
-- Dependencies installed ✅
-- Type definitions created ✅
-- Utility functions implemented ✅
-- UI components ready ✅
-- Development environment working ✅
-
-The next phase will focus on the core video processing capabilities that will power the entire application.
+- **Documentation**: Comprehensive JSDoc comments
+- **Responsiveness**: Fully responsive, nothing goes outside bounds

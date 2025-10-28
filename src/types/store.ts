@@ -11,6 +11,7 @@ export interface EditorStore {
   playhead: number
   duration: number
   zoomLevel: number
+  timelineScrollOffset: number
 
   // Playback
   isPlaying: boolean
@@ -39,6 +40,8 @@ export interface EditorStore {
   removeClip: (id: string) => void
   setTrimPoints: (start: number, end: number) => void
   setPlayhead: (time: number) => void
+  setZoomLevel: (zoomLevel: number) => void
+  setTimelineScrollOffset: (offset: number) => void
   togglePlayback: () => void
   setVolume: (volume: number) => void
   toggleMute: () => void

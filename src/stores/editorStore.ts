@@ -27,6 +27,7 @@ export const useEditorStore = create<EditorStore>()(
         playhead: 0,
         duration: 0,
         zoomLevel: 1,
+        timelineScrollOffset: 0,
         isPlaying: false,
         playbackRate: 1,
         volume: 1,
@@ -62,7 +63,9 @@ export const useEditorStore = create<EditorStore>()(
               trimEnd: clip.duration,
               playhead: 0,
               trimStart: 0,
-              isPlaying: false
+              isPlaying: false,
+              zoomLevel: 1,
+              timelineScrollOffset: 0
             }
           }),
 
@@ -78,7 +81,9 @@ export const useEditorStore = create<EditorStore>()(
               trimStart: isSelectedClip ? 0 : state.trimStart,
               trimEnd: isSelectedClip ? 0 : state.trimEnd,
               playhead: isSelectedClip ? 0 : state.playhead,
-              isPlaying: false
+              isPlaying: false,
+              zoomLevel: isSelectedClip ? 1 : state.zoomLevel,
+              timelineScrollOffset: isSelectedClip ? 0 : state.timelineScrollOffset
             }
           }),
 
@@ -93,6 +98,16 @@ export const useEditorStore = create<EditorStore>()(
           set((state) => ({
             playhead: Math.max(0, Math.min(time, state.duration))
           })),
+
+        setZoomLevel: (zoomLevel: number) =>
+          set({
+            zoomLevel: Math.max(0.5, Math.min(10, zoomLevel))
+          }),
+
+        setTimelineScrollOffset: (offset: number) =>
+          set({
+            timelineScrollOffset: Math.max(0, offset)
+          }),
 
         // Playback actions
         togglePlayback: () =>
@@ -196,77 +211,97 @@ export const useSelectedClip = () => useEditorStore((state) => state.selectedCli
 export const useImportHistory = () => useEditorStore((state) => state.importHistory)
 
 // Timeline selectors
-export const useTimeline = () =>
-  useEditorStore((state) => ({
-    playhead: state.playhead,
-    duration: state.duration,
-    zoomLevel: state.zoomLevel,
-    timelineClips: state.timelineClips
-  }))
+export const useTimeline = () => {
+  const playhead = useEditorStore((state) => state.playhead)
+  const duration = useEditorStore((state) => state.duration)
+  const zoomLevel = useEditorStore((state) => state.zoomLevel)
+  const timelineScrollOffset = useEditorStore((state) => state.timelineScrollOffset)
+  const trimStart = useEditorStore((state) => state.trimStart)
+  const trimEnd = useEditorStore((state) => state.trimEnd)
+
+  return { playhead, duration, zoomLevel, timelineScrollOffset, trimStart, trimEnd }
+}
 
 // Playback selectors
-export const usePlayback = () =>
-  useEditorStore((state) => ({
-    isPlaying: state.isPlaying,
-    playbackRate: state.playbackRate,
-    volume: state.volume,
-    isMuted: state.isMuted
-  }))
+export const usePlayback = () => {
+  const isPlaying = useEditorStore((state) => state.isPlaying)
+  const playbackRate = useEditorStore((state) => state.playbackRate)
+  const volume = useEditorStore((state) => state.volume)
+  const isMuted = useEditorStore((state) => state.isMuted)
+
+  return { isPlaying, playbackRate, volume, isMuted }
+}
 
 // Trim selectors
-export const useTrim = () =>
-  useEditorStore((state) => ({
-    trimStart: state.trimStart,
-    trimEnd: state.trimEnd,
-    isDragging: state.isDragging
-  }))
+export const useTrim = () => {
+  const trimStart = useEditorStore((state) => state.trimStart)
+  const trimEnd = useEditorStore((state) => state.trimEnd)
+  const isDragging = useEditorStore((state) => state.isDragging)
+
+  return { trimStart, trimEnd, isDragging }
+}
 
 // Export selectors
-export const useExport = () =>
-  useEditorStore((state) => ({
-    isExporting: state.isExporting,
-    exportProgress: state.exportProgress,
-    exportSettings: state.exportSettings
-  }))
+export const useExport = () => {
+  const isExporting = useEditorStore((state) => state.isExporting)
+  const exportProgress = useEditorStore((state) => state.exportProgress)
+  const exportSettings = useEditorStore((state) => state.exportSettings)
+
+  return { isExporting, exportProgress, exportSettings }
+}
 
 // UI selectors
-export const useUI = () =>
-  useEditorStore((state) => ({
-    activeModal: state.activeModal,
-    sidebarCollapsed: state.sidebarCollapsed,
-    theme: state.theme
-  }))
+export const useUI = () => {
+  const activeModal = useEditorStore((state) => state.activeModal)
+  const sidebarCollapsed = useEditorStore((state) => state.sidebarCollapsed)
+  const theme = useEditorStore((state) => state.theme)
+
+  return { activeModal, sidebarCollapsed, theme }
+}
 
 // Action selectors
-export const useMediaActions = () =>
-  useEditorStore((state) => ({
-    addClip: state.addClip,
-    selectClip: state.selectClip,
-    removeClip: state.removeClip
-  }))
+export const useMediaActions = () => {
+  const addClip = useEditorStore((state) => state.addClip)
+  const selectClip = useEditorStore((state) => state.selectClip)
+  const removeClip = useEditorStore((state) => state.removeClip)
 
-export const usePlaybackActions = () =>
-  useEditorStore((state) => ({
-    togglePlayback: state.togglePlayback,
-    setVolume: state.setVolume,
-    toggleMute: state.toggleMute,
-    setPlayhead: state.setPlayhead
-  }))
+  return { addClip, selectClip, removeClip }
+}
 
-export const useTrimActions = () =>
-  useEditorStore((state) => ({
-    setTrimPoints: state.setTrimPoints,
-    resetTrim: state.resetTrim,
-    setIsDragging: state.setIsDragging
-  }))
+export const usePlaybackActions = () => {
+  const togglePlayback = useEditorStore((state) => state.togglePlayback)
+  const setVolume = useEditorStore((state) => state.setVolume)
+  const toggleMute = useEditorStore((state) => state.toggleMute)
+  const setPlayhead = useEditorStore((state) => state.setPlayhead)
 
-export const useExportActions = () =>
-  useEditorStore((state) => ({
-    startExport: state.startExport
-  }))
+  return { togglePlayback, setVolume, toggleMute, setPlayhead }
+}
 
-export const useUIActions = () =>
-  useEditorStore((state) => ({
-    setActiveModal: state.setActiveModal,
-    toggleSidebar: state.toggleSidebar
-  }))
+export const useTrimActions = () => {
+  const setTrimPoints = useEditorStore((state) => state.setTrimPoints)
+  const resetTrim = useEditorStore((state) => state.resetTrim)
+  const setIsDragging = useEditorStore((state) => state.setIsDragging)
+
+  return { setTrimPoints, resetTrim, setIsDragging }
+}
+
+export const useTimelineActions = () => {
+  const setPlayhead = useEditorStore((state) => state.setPlayhead)
+  const setZoomLevel = useEditorStore((state) => state.setZoomLevel)
+  const setTimelineScrollOffset = useEditorStore((state) => state.setTimelineScrollOffset)
+
+  return { setPlayhead, setZoomLevel, setTimelineScrollOffset }
+}
+
+export const useExportActions = () => {
+  const startExport = useEditorStore((state) => state.startExport)
+
+  return { startExport }
+}
+
+export const useUIActions = () => {
+  const setActiveModal = useEditorStore((state) => state.setActiveModal)
+  const toggleSidebar = useEditorStore((state) => state.toggleSidebar)
+
+  return { setActiveModal, toggleSidebar }
+}
