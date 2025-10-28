@@ -26,6 +26,11 @@ declare global {
       // Progress event listeners
       onExportProgress: (callback: (progress: ExportProgress) => void) => () => void
       onConvertProgress: (callback: (progress: ExportProgress) => void) => () => void
+
+      // File dialog operations
+      selectVideoFile: () => Promise<string | null>
+      selectExportPath: (defaultFilename: string) => Promise<string | null>
+      openFolder: (folderPath: string) => Promise<void>
     }
   }
 }
