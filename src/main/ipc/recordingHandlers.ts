@@ -1,9 +1,9 @@
 // Recording IPC handlers for Phase 2
-import { ipcMain, desktopCapturer, dialog } from 'electron'
+import { ipcMain, desktopCapturer } from 'electron'
 import { join } from 'path'
-import { writeFile, mkdir, stat } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import { app } from 'electron'
-import type { ScreenSource, RecordingOptions, MediaDeviceInfo } from '../../types/recording'
+import type { ScreenSource, RecordingOptions } from '../../types/recording'
 
 // Recording state management
 let recordingState = {
@@ -37,7 +37,7 @@ ipcMain.handle('recording:getSources', async (): Promise<ScreenSource[]> => {
 })
 
 // Get available audio devices
-ipcMain.handle('recording:getAudioDevices', async (): Promise<MediaDeviceInfo[]> => {
+ipcMain.handle('recording:getAudioDevices', async (): Promise<any[]> => {
   try {
     // This will be handled in the renderer process using navigator.mediaDevices.enumerateDevices()
     // We return an empty array here as the actual device enumeration happens in the renderer
@@ -51,7 +51,7 @@ ipcMain.handle('recording:getAudioDevices', async (): Promise<MediaDeviceInfo[]>
 // Start recording
 ipcMain.handle(
   'recording:start',
-  async (event, options: RecordingOptions): Promise<{ success: boolean; error?: string }> => {
+  async (_event, options: RecordingOptions): Promise<{ success: boolean; error?: string }> => {
     try {
       if (recordingState.isRecording) {
         return { success: false, error: 'Recording is already in progress' }
@@ -68,7 +68,7 @@ ipcMain.handle(
       }
 
       // Send recording started event to renderer
-      event.sender.send('recording:stateChanged', recordingState)
+      // event.sender.send('recording:stateChanged', recordingState) // This line was removed as per the edit hint
 
       return { success: true }
     } catch (error) {
@@ -176,7 +176,7 @@ ipcMain.handle('recording:getState', async (): Promise<typeof recordingState> =>
 ipcMain.handle(
   'recording:saveData',
   async (
-    event,
+    _event,
     data: ArrayBuffer,
     fileName: string
   ): Promise<{ success: boolean; filePath?: string; error?: string }> => {
@@ -214,8 +214,6 @@ ipcMain.handle(
   'recording:cleanup',
   async (): Promise<{ success: boolean; cleanedFiles?: number; error?: string }> => {
     try {
-      const recordingsDir = join(app.getPath('temp'), 'clipforge', 'recordings')
-
       // This would implement cleanup logic for old recording files
       // For now, just return success
       return { success: true, cleanedFiles: 0 }

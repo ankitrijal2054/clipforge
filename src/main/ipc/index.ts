@@ -7,7 +7,6 @@
 
 import { registerVideoHandlers } from './videoHandlers'
 import { registerExportHandlers } from './exportHandlers'
-import { recordingHandlers } from './recordingHandlers'
 
 /**
  * Register all IPC handlers
