@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Upload, FileVideo, Loader2 } from 'lucide-react'
 import { useEditorStore } from '../../../stores/editorStore'
-import { isValidMediaFile } from '../../../utils/validators'
+import { isValidMediaFile, isValidVideoFile, isValidAudioFile } from '../../../utils/validators'
 import { VideoClip } from '../../../types/video'
 import { useToast } from '../../../hooks/use-toast'
 
@@ -34,6 +34,35 @@ export function ImportManager(): React.ReactElement {
         // Get media metadata (video or audio)
         const metadata = await window.api.getVideoMetadata(filePath)
 
+        let thumbnail: string | undefined
+
+        // Check if it's a video file and generate thumbnail
+        if (isValidVideoFile(filePath)) {
+          try {
+            // Get first frame as thumbnail
+            const tempThumbnailPath = `/tmp/thumbnail_${Date.now()}.png`
+
+            // Use a frame from ~1 second in or 25% into the video to avoid black intro frames
+            // This gives a better representative thumbnail of actual content
+            const thumbnailTime = Math.min(1, metadata.duration * 0.25)
+
+            const thumbnailPath = await window.api.getVideoThumbnail({
+              filePath,
+              timeInSeconds: thumbnailTime,
+              outputPath: tempThumbnailPath
+            })
+            // Convert file path to clipforge:// URL for loading in img tag
+            thumbnail = `clipforge://${thumbnailPath}`
+          } catch (error) {
+            console.warn('Failed to generate thumbnail:', error)
+            // Continue without thumbnail if generation fails
+          }
+        } else if (isValidAudioFile(filePath)) {
+          // Create a simple audio icon as data URL
+          // Using a blue audio waveform SVG
+          thumbnail = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 90'%3E%3Crect fill='%231e293b' width='160' height='90'/%3E%3Cpath fill='%233b82f6' d='M50 45 L50 35 L55 45 L55 35 L60 45 L60 40 L65 45 L65 35'/%3E%3Cpath fill='%233b82f6' d='M75 45 L75 30 L80 45 L80 30 L85 45 L85 25 L90 45 L90 30'/%3E%3Cpath fill='%233b82f6' d='M100 45 L100 35 L105 45 L105 35 L110 45 L110 40 L115 45 L115 35'/%3E%3C/svg%3E`
+        }
+
         // Create video clip object
         const clip: VideoClip = {
           id: crypto.randomUUID(),
@@ -43,7 +72,8 @@ export function ImportManager(): React.ReactElement {
           width: metadata.width,
           height: metadata.height,
           fileSize: metadata.fileSize,
-          bitRate: metadata.bitRate
+          bitRate: metadata.bitRate,
+          thumbnail
         }
 
         // Add to store

@@ -9,7 +9,7 @@ import { useToast } from '../../../hooks/use-toast'
  * MediaLibrary component for displaying imported videos
  *
  * Features:
- * - Video list display
+ * - Video list display with thumbnails
  * - Selection management
  * - Video removal
  * - Metadata display
@@ -57,13 +57,13 @@ export function MediaLibrary() {
         </span>
       </div>
 
-      <div className="space-y-1 max-h-96 overflow-y-auto">
+      <div className="space-y-2 max-h-96 overflow-y-auto">
         {clips.map((clip) => (
           <motion.div
             key={clip.id}
-            className={`p-2 rounded-lg cursor-pointer transition-all duration-200 ${
+            className={`rounded-lg cursor-pointer transition-all duration-200 overflow-hidden ${
               selectedClip?.id === clip.id
-                ? 'bg-blue-600 border border-blue-500 shadow-lg'
+                ? 'ring-2 ring-blue-500 shadow-lg bg-blue-600/10'
                 : 'bg-gray-800 hover:bg-gray-700 border border-transparent hover:border-gray-600'
             }`}
             onClick={() => handleSelectClip(clip.id)}
@@ -79,43 +79,52 @@ export function MediaLibrary() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="flex items-center space-x-2">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center">
-                  <FileVideo className="w-4 h-4 text-gray-400" />
-                </div>
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-medium text-white truncate">{clip.name}</h4>
-
-                <div className="flex flex-wrap gap-2 text-xs text-gray-400 items-center">
-                  <span className="flex items-center gap-0.5">
-                    <Play className="w-2.5 h-2.5" />
-                    {formatDuration(clip.duration)}
-                  </span>
+            {/* Thumbnail Section */}
+            <div className="relative w-full h-20 bg-gray-900 flex items-center justify-center overflow-hidden">
+              {clip.thumbnail ? (
+                <img src={clip.thumbnail} alt={clip.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-700 to-gray-800">
                   {clip.width > 0 && clip.height > 0 ? (
-                    <span>{formatResolution(clip.width, clip.height)}</span>
+                    <FileVideo className="w-8 h-8 text-gray-500" />
                   ) : (
-                    <span className="flex items-center gap-1">
-                      <Music className="w-3 h-3" /> Audio
-                    </span>
+                    <Music className="w-8 h-8 text-blue-400" />
                   )}
-                  <span>{formatFileSize(clip.fileSize)}</span>
                 </div>
-              </div>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleRemoveClip(clip.id, clip.name)
-                }}
-                className="p-1 text-gray-400 hover:text-red-400 transition-colors rounded hover:bg-red-900/20 flex-shrink-0"
-                title="Remove video"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
+              )}
             </div>
+
+            {/* Info Section */}
+            <div className="p-2 space-y-1">
+              <h4 className="text-xs font-medium text-white truncate">{clip.name}</h4>
+
+              <div className="flex flex-wrap gap-2 text-xs text-gray-400">
+                <span className="flex items-center gap-0.5">
+                  <Play className="w-2.5 h-2.5" />
+                  {formatDuration(clip.duration)}
+                </span>
+                {clip.width > 0 && clip.height > 0 ? (
+                  <span>{formatResolution(clip.width, clip.height)}</span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <Music className="w-3 h-3" /> Audio
+                  </span>
+                )}
+                <span>{formatFileSize(clip.fileSize)}</span>
+              </div>
+            </div>
+
+            {/* Delete Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleRemoveClip(clip.id, clip.name)
+              }}
+              className="absolute top-1 right-1 p-1 text-gray-400 hover:text-red-400 transition-colors rounded hover:bg-red-900/30 bg-gray-900/50 backdrop-blur-sm"
+              title="Remove video"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
           </motion.div>
         ))}
       </div>
