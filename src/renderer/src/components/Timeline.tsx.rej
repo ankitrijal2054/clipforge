@@ -1,0 +1,18 @@
+@@ -204,9 +204,16 @@
+       if (e.key === 's' || e.key === 'S') {
+         if (selectedClipId) {
+           e.preventDefault()
++          // Split selected clip at playhead position
+           splitClip(selectedClipId, playheadTime)
++          console.log('✓ Split clip', selectedClipId, 'at time', playheadTime)
+         }
+       } else if (e.key === 'Delete') {
+         if (selectedClipId) {
+           e.preventDefault()
+-          removeClipFromTrack(selectedClipId)
++          // Determine which track contains the selected clip
++          const isInVideoTrack = timelineVideoClips.some((c) => c.id === selectedClipId)
++          const trackType = isInVideoTrack ? 'video' : 'audio'
++          // Delete the clip from its track
++          removeClipFromTrack(trackType, selectedClipId)
++          console.log('✓ Deleted clip', selectedClipId, 'from', trackType, 'track')

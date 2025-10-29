@@ -61,8 +61,7 @@ const generateTimeMarkers = (duration: number, interval: number): number[] => {
  */
 export const Timeline: React.FC = () => {
   const { timelineVideoClips, timelineAudioClips, selectedClipId } = useTimelineClips()
-  const { selectTimelineClip, toggleTrackMute, addClipToTrack, splitClip, removeClipFromTrack } =
-    useMultiClipTimelineActions()
+  const { selectTimelineClip, toggleTrackMute, addClipToTrack, splitClip, removeClipFromTrack } = useMultiClipTimelineActions()
   const isMuted = useTimelineTrackMute()
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -205,26 +204,19 @@ export const Timeline: React.FC = () => {
       if (e.key === 's' || e.key === 'S') {
         if (selectedClipId) {
           e.preventDefault()
-          // Split selected clip at playhead position
           splitClip(selectedClipId, playheadTime)
-          console.log('✓ Split clip', selectedClipId, 'at time', playheadTime)
         }
       } else if (e.key === 'Delete') {
         if (selectedClipId) {
           e.preventDefault()
-          // Determine which track contains the selected clip
-          const isInVideoTrack = timelineVideoClips.some((c) => c.id === selectedClipId)
-          const trackType = isInVideoTrack ? 'video' : 'audio'
-          // Delete the clip from its track
-          removeClipFromTrack(trackType, selectedClipId)
-          console.log('✓ Deleted clip', selectedClipId, 'from', trackType, 'track')
+          removeClipFromTrack(selectedClipId)
         }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedClipId, playheadTime, timelineVideoClips, splitClip, removeClipFromTrack])
+  }, [selectedClipId, playheadTime])
 
   const playheadPixelPosition = TRACK_HEADER_WIDTH + playheadTime * pixelsPerSecond
 
