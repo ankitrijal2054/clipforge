@@ -124,10 +124,28 @@ export function registerVideoHandlers(): void {
       const result = await dialog.showOpenDialog({
         properties: ['openFile'],
         filters: [
+          // Put combined Media first so audio (e.g., mp3) isn't disabled by default
+          {
+            name: 'Media',
+            extensions: [
+              'mp4',
+              'mov',
+              'webm',
+              'avi',
+              'mkv',
+              'mp3',
+              'wav',
+              'm4a',
+              'aac',
+              'flac',
+              'ogg'
+            ]
+          },
           { name: 'Videos', extensions: ['mp4', 'mov', 'webm', 'avi', 'mkv'] },
+          { name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg'] },
           { name: 'All Files', extensions: ['*'] }
         ],
-        title: 'Select Video File'
+        title: 'Select Media File'
       })
 
       if (result.canceled || result.filePaths.length === 0) {

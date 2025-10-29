@@ -63,29 +63,46 @@ export async function getVideoMetadata(filePath: string): Promise<VideoMetadata>
           const metadata: FFprobeOutput = JSON.parse(output)
           const format = metadata.format
           const videoStream = metadata.streams.find((stream) => stream.codec_type === 'video')
+          const audioStream = metadata.streams.find((stream) => stream.codec_type === 'audio')
 
-          if (!videoStream) {
-            reject(new Error('No video stream found in file'))
+          if (!videoStream && !audioStream) {
+            reject(new Error('No audio or video streams found in file'))
             return
           }
 
           const duration = parseFloat(format.duration) || 0
-          const width = videoStream.width || 0
-          const height = videoStream.height || 0
           const fileSize = parseInt(format.size) || 0
-          const bitRate = parseInt(format.bit_rate) || parseInt(videoStream.bit_rate) || 0
-          const frameRate = parseFrameRate(videoStream.r_frame_rate)
 
-          resolve({
-            duration,
-            width,
-            height,
-            fileSize,
-            bitRate,
-            frameRate,
-            codec: videoStream.codec_name,
-            filename: format.filename
-          })
+          if (videoStream) {
+            const width = videoStream.width || 0
+            const height = videoStream.height || 0
+            const bitRate = parseInt(format.bit_rate) || parseInt(videoStream.bit_rate) || 0
+            const frameRate = parseFrameRate(videoStream.r_frame_rate)
+
+            resolve({
+              duration,
+              width,
+              height,
+              fileSize,
+              bitRate,
+              frameRate,
+              codec: videoStream.codec_name,
+              filename: format.filename
+            })
+          } else if (audioStream) {
+            // Audio-only file: width/height/frameRate = 0, codec from audio
+            const bitRate = parseInt(format.bit_rate) || parseInt(audioStream.bit_rate) || 0
+            resolve({
+              duration,
+              width: 0,
+              height: 0,
+              fileSize,
+              bitRate,
+              frameRate: 0,
+              codec: audioStream.codec_name,
+              filename: format.filename
+            })
+          }
         } catch (error) {
           reject(
             new Error(
