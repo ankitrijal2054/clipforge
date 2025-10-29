@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Download } from 'lucide-react'
+import { Download, Mic, X } from 'lucide-react'
 import { useState } from 'react'
 import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
@@ -16,7 +16,8 @@ import { useEditorStore } from '../../../stores/editorStore'
  * Features:
  * - Left sidebar: Import Manager and Media Library
  * - Main content area: Video Preview and Timeline
- * - Right sidebar: Recording section with scrollable recent recordings
+ * - Right sidebar: Collapsible Recording section (hidden by default)
+ * - Modern ribbon toggle button for quick record access
  * - Responsive layout ensuring nothing goes out of bounds
  */
 export function Layout(): React.ReactElement {
@@ -24,6 +25,7 @@ export function Layout(): React.ReactElement {
   const timelineVideoClips = useEditorStore((state) => state.timelineVideoClips)
   const setActiveModal = useEditorStore((state) => state.setActiveModal)
   const [isPreviewFullscreen, setIsPreviewFullscreen] = useState(false)
+  const [isQuickRecordOpen, setIsQuickRecordOpen] = useState(false)
 
   return (
     <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
@@ -183,16 +185,45 @@ export function Layout(): React.ReactElement {
         )}
       </div>
 
-      {/* RIGHT SIDEBAR - Recording Section */}
-      {!isPreviewFullscreen && (
+      {/* RIGHT SIDEBAR - Collapsible Recording Section */}
+      {!isPreviewFullscreen && isQuickRecordOpen && (
         <motion.div
           className="w-64 bg-gray-800/95 backdrop-blur-sm border-l border-gray-700 flex flex-col shadow-xl overflow-hidden"
           initial={{ x: 256 }}
           animate={{ x: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
+          <div className="flex items-center justify-between p-3 border-b border-gray-700 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <Mic size={18} className="text-red-400" />
+              <span className="text-sm font-semibold">Quick Record</span>
+            </div>
+            <button
+              onClick={() => setIsQuickRecordOpen(false)}
+              className="p-1 hover:bg-gray-700 rounded transition-colors"
+              title="Close quick record"
+            >
+              <X size={16} className="text-gray-400 hover:text-white" />
+            </button>
+          </div>
           <RecordingPanel />
         </motion.div>
+      )}
+
+      {/* QUICK RECORD TOGGLE BUTTON - Modern Ribbon Style */}
+      {!isPreviewFullscreen && !isQuickRecordOpen && (
+        <motion.button
+          onClick={() => setIsQuickRecordOpen(true)}
+          className="fixed top-4 right-4 z-40 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 font-medium text-sm"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Mic size={16} />
+          Quick Record
+        </motion.button>
       )}
 
       {/* Export Modal - floats above all content */}
