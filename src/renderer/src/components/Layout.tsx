@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion'
-import { Download } from 'lucide-react'
+import { Download, Mic } from 'lucide-react'
+import { useState } from 'react'
 import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
+import { RecordingPanel } from './recording/RecordingPanel'
 import { PreviewPlayer } from './PreviewPlayer'
 import { Timeline } from './Timeline'
 import { ExportModal } from '../../../components/ExportModal'
@@ -13,7 +15,7 @@ import { useEditorStore } from '../../../stores/editorStore'
  *
  * Features:
  * - Responsive layout with sidebar
- * - Sidebar with media library
+ * - Sidebar with media library and recording panel
  * - Main content area with video preview
  * - Timeline component below preview
  * - Smooth transitions
@@ -23,6 +25,7 @@ export function Layout() {
   const { clips } = useEditorStore()
   const selectedClip = useEditorStore((state) => state.selectedClip)
   const setActiveModal = useEditorStore((state) => state.setActiveModal)
+  const [sidebarTab, setSidebarTab] = useState<'library' | 'recording'>('library')
 
   return (
     <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
@@ -57,17 +60,46 @@ export function Layout() {
           <p className="text-sm text-gray-400">Professional Video Trimming</p>
         </div>
 
+        {/* Import Manager - at the top */}
+        <div className="px-4 py-3 border-b border-gray-700 flex-shrink-0">
+          <ImportManager />
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex gap-2 p-4 border-b border-gray-700 flex-shrink-0">
+          <button
+            onClick={() => setSidebarTab('library')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors ${
+              sidebarTab === 'library'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            Library
+          </button>
+          <button
+            onClick={() => setSidebarTab('recording')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+              sidebarTab === 'recording'
+                ? 'bg-red-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            <Mic className="w-3 h-3" />
+            Record
+          </button>
+        </div>
+
         {/* Sidebar Content - scrollable if needed */}
         <div className="flex-1 overflow-y-auto min-h-0">
-          {clips.length === 0 ? (
-            <div className="p-4">
-              <ImportManager />
+          {sidebarTab === 'recording' ? (
+            <div className="p-4 h-full overflow-y-auto">
+              <RecordingPanel />
             </div>
+          ) : clips.length === 0 ? (
+            <div className="p-4">{/* ImportManager already shown at top */}</div>
           ) : (
             <div className="p-4 h-full flex flex-col">
-              <div className="mb-4 flex-shrink-0">
-                <ImportManager />
-              </div>
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <MediaLibrary />
               </div>
@@ -125,23 +157,23 @@ export function Layout() {
               </div>
               <h2 className="text-4xl font-bold text-white mb-6">Welcome to ClipForge</h2>
               <p className="text-xl text-gray-400 mb-8 leading-relaxed">
-                Professional video trimming made simple. Import your videos and start editing with
-                precision.
+                Professional video trimming made simple. Import your videos, record new content, or
+                start editing with precision.
               </p>
               <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
                 <h3 className="text-lg font-semibold text-white mb-4">Get Started</h3>
                 <div className="space-y-3 text-gray-400">
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Drag and drop video files into the sidebar</span>
+                    <span>Click "Record" tab to start recording video</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Or use the "Browse" button to select videos</span>
+                    <span>Or click "Library" to import existing videos</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Supports MP4, MOV, WebM, AVI, and MKV formats</span>
+                    <span>Supports screen, webcam, and picture-in-picture recording</span>
                   </div>
                 </div>
               </div>

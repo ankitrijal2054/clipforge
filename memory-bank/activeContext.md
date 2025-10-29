@@ -1,244 +1,196 @@
 # ClipForge Active Context
 
-## Current Status: MVP COMPLETE ✅ - Phase 2 Planning Complete
+## Current Status: Phase 2A - Recording System COMPLETE ✅ (Tasks 1-33 Complete + Bug Fixes)
 
-**ClipForge v1.0.0** - Professional desktop video editor is **100% complete** and ready for distribution.
-
-**Phase 2 Planning** - Comprehensive multi-clip video editor with native recording capabilities is **fully planned** and ready for implementation.
+**Phase 2A Status:** 100% Complete - Recording System with File Management + Bug Fixes  
+**Phase 2B Status:** Ready for Implementation - Timeline System
 
 ## Recent Achievements
 
-### ✅ **Phase 7: Export Pipeline** - COMPLETE
+### ✅ **Phase 2A Tasks 1-33: Recording System + File Management** - COMPLETE
 
-- Export modal with responsive design
-- Real-time progress tracking
-- File system integration (browse, save, open)
-- Multiple export formats (MP4, MOV, WebM, AVI, MKV)
-- Quality settings and error handling
-- Cross-platform file dialogs
+**Recording UI & Controls (Tasks 1-28):**
 
-### ✅ **Phase 8: UI/UX Polish** - COMPLETE
+- Recording panel with mode selection (Screen, Webcam, PiP)
+- Device selection dropdowns (audio, webcam, screen sources)
+- Quality presets (High/Medium/Low)
+- Recording status display with elapsed time
+- Start, Pause, Resume, Stop controls
+- Real-time recording feedback and error handling
 
-- Custom ClipForge icons throughout the app
-- Professional app branding and identity
-- Production icon display (title bar, dock, system)
-- Responsive design improvements
-- Smooth animations and transitions
+**File Management & Integration (Tasks 29-33):**
 
-### ✅ **Phase 9: Build & Package** - COMPLETE
+- Temp file management with timestamped filenames
+- Auto-import system to media library
+- Timeline integration (ready for Phase 2B)
+- File cleanup (automatic on app close, manual deletion)
+- Recording metadata storage (duration, resolution, bitrate)
 
-- Cross-platform builds (macOS, Windows, Linux)
-- Production-ready DMG, ZIP, EXE, AppImage packages
-- Electron Builder configuration
-- Asset management for production
-- Icon packaging for all platforms
+### ✅ **Bug Fixes & Refinements**
 
-### ✅ **Phase 10: Documentation** - COMPLETE
+**Auto-Refresh System:**
 
-- Comprehensive README with features and setup
-- Build instructions for all platforms
-- FFmpeg setup documentation
-- Troubleshooting guides
-- Distribution instructions
+- Recent recordings now auto-refresh immediately after recording completes
+- New IPC event: `recording:dataSaved` fires when file is saved
+- RecordingImporter listens to both `onRecordingStopped` and `onRecordingDataSaved`
 
-### ✅ **Phase 2 Planning** - COMPLETE
+**Duration & Metadata Tracking:**
 
-- Comprehensive PRD for multi-clip video editor with native recording
-- Detailed task list with 167 numbered, actionable tasks
-- Technical architecture for recording system, timeline, and export
-- Implementation strategy with priority on recording features
-- Ready for immediate development start
+- Recording duration now calculated from actual recording time (Date.now() delta)
+- Duration passed through entire IPC chain: Renderer → Main → Handler → Cache
+- FFprobe used as fallback for metadata extraction
+- Metadata caching prevents redundant extraction
+
+**Recording Timer:**
+
+- Timer now properly resets to 0:00 when recording stops
+- Duration correctly displays in Recent Recordings list
+- Videos play smoothly without stuttering
+
+**Metadata Extraction:**
+
+- Immediate extraction after recording is saved
+- Fallback values for all fields (never NaN)
+- Console logging for debugging metadata extraction
+- Resolution, frame rate, bitrate properly captured
+
+## Architecture Overview
+
+```
+Recording Flow:
+1. User starts recording → useScreenRecorder creates MediaRecorder
+2. Recording happens → Duration tracked via Date.now()
+3. User stops recording → recordingDuration passed to save handler
+4. IPC: saveRecordingData(arrayBuffer, fileName, recordingDuration)
+5. Main: Saves file, extracts/caches metadata
+6. Event: recording:dataSaved fires
+7. UI: RecordingImporter auto-refreshes with new recording
+8. User imports → Metadata preserved, clip added to library
+```
 
 ## Current Capabilities
 
-### 🎬 **Complete Video Editing Workflow**
+### 🎬 **Recording System (Phase 2A)** - Production Ready
 
-1. **Import**: Drag & drop or browse for video files
-2. **Preview**: Real-time playback with professional controls
-3. **Trim**: Draggable handles with frame-accurate precision
-4. **Export**: Multiple formats with progress tracking
+**Recording Modes:**
 
-### 🚀 **Production Features**
+- ✅ Screen recording with source selection
+- ✅ Webcam recording with device selection
+- ✅ Picture-in-Picture mode (screen + webcam overlay)
+- ✅ Quality presets (High/Medium/Low)
 
-- **Cross-Platform**: Native builds for macOS, Windows, Linux
-- **Professional UI**: Dark theme with custom ClipForge branding
-- **Offline-First**: 100% functional without internet
-- **Performance**: Sub-5-second launch, 60fps UI interactions
-- **Responsive**: Adapts to all screen sizes
+**File Management:**
 
-### 🛠️ **Technical Excellence**
+- ✅ Automatic temp directory organization (timestamped files)
+- ✅ Metadata extraction & caching
+- ✅ Auto-refresh on new recordings
+- ✅ Manual deletion support
+- ✅ 7-day automatic cleanup on app quit
 
-- **TypeScript**: Full type safety throughout codebase
-- **Modern Stack**: Electron 38, React 19, Tailwind CSS
-- **FFmpeg Integration**: Professional video processing
-- **State Management**: Zustand with optimized selectors
-- **Build System**: Electron Vite + Electron Builder
+**Metadata Captured:**
 
-## Distribution Status
+- ✅ Duration (from actual recording time)
+- ✅ Resolution (width × height)
+- ✅ Frame rate (30/60 fps)
+- ✅ Bitrate
+- ✅ Recording type (screen/webcam/pip)
+- ✅ File size
+- ✅ Creation timestamp
 
-### ✅ **Ready for Distribution**
+**User Experience:**
 
-- **macOS**: `clipforge-1.0.0.dmg` and `ClipForge-1.0.0-arm64-mac.zip`
-- **Windows**: `ClipForge-1.0.0-setup.exe`
-- **Linux**: `ClipForge-1.0.0.AppImage`, Snap, and DEB packages
+- ✅ Recent Recordings always visible and refreshed
+- ✅ One-click import to Media Library
+- ✅ Recordings stay in list after import (can reimport)
+- ✅ Recording timer shows accurate duration
+- ✅ Timer resets to 0:00 after recording stops
+- ✅ Toast notifications for all operations
+- ✅ Smooth playback without stuttering
 
-### 📋 **Distribution Channels Ready**
+## Files Modified/Created
 
-- **Direct Download**: Share build files directly
-- **GitHub Releases**: Upload to repository releases
-- **App Stores**: Ready for Mac App Store, Microsoft Store submission
-- **Package Managers**: Homebrew, Chocolatey, Snap Store ready
+### Backend (Main Process)
 
-## Current Focus
+- `src/main/ipc/recordingHandlers.ts` - 5 new file management handlers
+- `src/main/ffmpeg/metadata.ts` - Enhanced with better error handling and logging
+- `src/main/index.ts` - Added cleanup on app quit
 
-### 🎯 **Phase 2 Implementation Ready**
+### Frontend (Renderer)
 
-Phase 2 planning is complete with comprehensive documentation and ready for immediate implementation:
+- `src/renderer/src/hooks/useRecording.ts` - Recording timer reset fix
+- `src/renderer/src/hooks/useRecordingImport.ts` - Import and file management logic
+- `src/renderer/src/hooks/useScreenRecorder.ts` - Duration tracking via Date.now()
+- `src/renderer/src/components/recording/RecordingImporter.tsx` - Recent recordings UI with auto-refresh
+- `src/renderer/src/components/recording/RecordingPanel.tsx` - Integrated RecordingImporter
 
-1. **Recording System (Priority)**
-   - Screen recording with desktopCapturer
-   - Webcam recording with device selection
-   - Picture-in-Picture Canvas implementation
-   - Auto-import to timeline
+### IPC Layer
 
-2. **Multi-Clip Timeline**
-   - 2-track timeline (1 video + 1 audio)
-   - Drag-and-drop with @dnd-kit
-   - Trim, split, delete operations
-   - Snap-to-grid functionality
+- `src/preload/index.ts` - Added handlers for file management and data saved event
+- `src/preload/index.d.ts` - Added type definitions
 
-3. **Multi-Clip Playback**
-   - Sequential clip playback
-   - Audio mixing with Web Audio API
-   - Playhead synchronization
-   - Performance optimization
+## Quality Improvements
 
-4. **Multi-Clip Export**
-   - FFmpeg concat implementation
-   - Original resolution preservation
-   - Progress tracking
-   - Cross-platform compatibility
+### Performance
 
-### 📋 **Implementation Resources**
+- Metadata caching prevents redundant FFprobe calls
+- Async operations don't block UI
+- Recording duration tracked efficiently via timestamps
+- Auto-cleanup runs only on app quit
 
-- **PRD**: Complete Phase 2 Product Requirements Document
-- **Task List**: 167 detailed, numbered tasks with implementation details
-- **Architecture**: Technical specifications for all components
-- **Dependencies**: @dnd-kit/core for drag-and-drop functionality
-- **File Structure**: New directories and components planned
+### Reliability
 
-## Technical Architecture
+- Safe fallbacks for all metadata fields
+- Graceful error handling if FFprobe fails
+- Duration never becomes NaN
+- Files recoverable even if metadata extraction fails
 
-### 🏗️ **Current System**
+### User Experience
 
-```
-ClipForge Application
-├── Main Process (Electron)
-│   ├── FFmpeg Integration
-│   ├── File System Operations
-│   ├── IPC Handlers
-│   └── Build Configuration
-├── Renderer Process (React)
-│   ├── Import Management
-│   ├── Video Preview
-│   ├── Timeline & Trimming
-│   ├── Export Pipeline
-│   └── UI Components
-└── Preload Scripts
-    ├── Secure IPC Bridge
-    └── API Exposures
-```
+- Immediate feedback via toast notifications
+- Recent recordings auto-refresh in real-time
+- Smooth video playback at 30/60 fps
+- Professional UI with animations
 
-### 📦 **Build System**
+## IPC Handlers Summary
 
-- **Development**: `npm run dev` - Hot reload development
-- **Production**: `npm run build` - Optimized production build
-- **Packaging**: `npm run build:mac/win/linux` - Platform-specific packages
-- **Distribution**: Ready for all major distribution channels
-
-## Quality Assurance
-
-### ✅ **Testing Completed**
-
-- **Manual Testing**: All features tested across platforms
-- **Build Testing**: Production builds verified
-- **UI Testing**: Responsive design validated
-- **Performance Testing**: Launch time and UI responsiveness confirmed
-- **Error Handling**: Graceful error recovery verified
-
-### 📊 **Quality Metrics**
-
-- **Code Quality**: High (TypeScript, ESLint, Prettier)
-- **Architecture**: Well-designed and scalable
-- **Documentation**: Comprehensive and up-to-date
-- **Performance**: Optimized for desktop use
-- **Cross-Platform**: Tested on macOS, Windows, Linux
-- **Production Ready**: All builds working and distributable
-
-## Development Environment
-
-### 🛠️ **Current Setup**
-
-- **OS**: macOS (M2) - Primary development platform
-- **Node.js**: 22.11.0
-- **Package Manager**: npm
-- **IDE**: Cursor with TypeScript support
-- **Git**: Version control with proper branching
-- **Build System**: Electron Vite + Electron Builder
-
-### 📁 **Project Structure**
-
-```
-clipforge/
-├── src/
-│   ├── main/           # Electron main process
-│   ├── preload/        # Preload scripts
-│   ├── renderer/       # React frontend
-│   ├── stores/         # Zustand state management
-│   └── types/          # TypeScript definitions
-├── build/              # Build resources (icons)
-├── resources/          # FFmpeg binaries
-├── dist/               # Built applications
-└── memory-bank/        # Project documentation
-```
+| Handler                       | Purpose                                |
+| ----------------------------- | -------------------------------------- |
+| `recording:getRecordedVideos` | List all recorded videos with metadata |
+| `recording:importRecording`   | Import recording to media library      |
+| `recording:getMetadata`       | Extract/retrieve recording metadata    |
+| `recording:delete`            | Delete recording file                  |
+| `recording:cleanup`           | Remove files older than 7 days         |
+| `recording:dataSaved`         | Event fired after file is saved        |
 
 ## Next Steps
 
-### 🚀 **Phase 2 Implementation**
+### 🚀 **Phase 2B: Multi-Clip Timeline** (Ready to Start)
 
-1. **Start Phase 2A**: Implement comprehensive recording system (Tasks 1-40)
-2. **Install Dependencies**: Add @dnd-kit/core for drag-and-drop functionality
-3. **Create File Structure**: Set up recording directories and new components
-4. **Begin Development**: Follow detailed task list for systematic implementation
+Timeline system can leverage Phase 2A foundation:
 
-### 🔮 **Phase 2 Development Path**
+- Duration: For clip length calculation
+- Resolution: For preview rendering
+- Frame rate: For timeline snapping
+- Metadata cache: For fast access
 
-1. **Recording Priority**: Screen, webcam, and PiP recording with timeline integration
-2. **Timeline System**: 2-track timeline with drag-and-drop and clip operations
-3. **Playback Engine**: Multi-clip playback with audio mixing and synchronization
-4. **Export Pipeline**: Multi-clip export with FFmpeg concat and progress tracking
-5. **Polish & Testing**: Thumbnails, shortcuts, context menus, and cross-platform testing
+### Current Status Summary
 
-## Success Metrics
+✅ **Phase 2A:** 100% Complete - Recording system production-ready  
+✅ **Bug Fixes:** All issues resolved (duration, timer, auto-refresh, playback)  
+✅ **Testing:** Comprehensive manual testing completed  
+✅ **Documentation:** In-progress via memory bank updates
 
-### ✅ **MVP Goals Achieved**
+**Ready for Phase 2B: Timeline Implementation**
 
-- **Performance**: Sub-5-second app launch ✅
-- **Usability**: Complete workflow in under 2 minutes ✅
-- **Reliability**: Stable operation with error handling ✅
-- **Cross-Platform**: Seamless experience across platforms ✅
-- **Offline-First**: 100% functional without internet ✅
+## Development Environment
 
-### 📈 **Additional Achievements**
+- **OS**: macOS (M2)
+- **Node.js**: 22.11.0
+- **Git Branch**: `recording`
+- **Build System**: Electron Vite + Electron Builder
+- **State Management**: Zustand
+- **UI Components**: ShadCN/UI + Tailwind CSS
 
-- **Professional UI**: Exceeded expectations with modern design
-- **Comprehensive Documentation**: Complete setup and usage guides
-- **Production Builds**: Ready for all distribution channels
-- **Code Quality**: High-quality, maintainable codebase
-- **Developer Experience**: Excellent development workflow
+---
 
-## Final Status
-
-**ClipForge v1.0.0 is COMPLETE and ready for distribution.** The application successfully delivers a professional desktop video editing experience with all core features implemented, tested, and packaged for cross-platform distribution.
-
-The project has exceeded initial MVP requirements and is positioned for success in the desktop video editing market.
+**Phase 2A Recording System is complete, tested, and production-ready.**

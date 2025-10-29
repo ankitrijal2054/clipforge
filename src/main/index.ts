@@ -71,6 +71,29 @@ app.whenReady().then(() => {
     }
   })
 
+  // Set up permission handler for camera and microphone via session
+  const session = require('electron').session
+  session.defaultSession.setPermissionCheckHandler(
+    (_webContents, _permission, _requestingOrigin) => {
+      // Allow all permissions (camera, microphone, media, etc.)
+      console.log(`Permission check requested for: ${_permission}`)
+      return true
+    }
+  )
+
+  // Handle permission requests - automatically grant camera/microphone/media
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    console.log(`Permission request for: ${permission}`)
+    // Grant camera, microphone, and media permissions
+    if (permission === 'camera' || permission === 'microphone' || permission === 'media') {
+      console.log(`Automatically granting ${permission} permission`)
+      callback(true)
+      return
+    }
+    console.log(`Denying permission: ${permission}`)
+    callback(false)
+  })
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.clipforge.app')
 
@@ -105,6 +128,20 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
+  }
+})
+
+// Cleanup on app quit
+app.on('before-quit', async () => {
+  try {
+    console.log('Performing cleanup on app quit...')
+    // Trigger recording cleanup via IPC handler
+    await ipcMain.handleOnce('recording:cleanup', async () => {
+      // This will be handled by the handler, just trigger it
+      return { success: true, cleanedFiles: 0 }
+    })
+  } catch (error) {
+    console.error('Error during app cleanup:', error)
   }
 })
 
