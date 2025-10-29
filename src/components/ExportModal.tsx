@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Download, FolderOpen, CheckCircle, AlertCircle } from 'lucide-react'
+import type { TimelineClip } from '../types/timeline'
+import type { VideoClip } from '../types/video'
 import { useEditorStore } from '../stores/editorStore'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -18,7 +20,24 @@ type ExportMode = 'single-clip' | 'timeline'
  *
  * Automatically detects mode based on timeline clip count.
  */
+type TimelineExportProgressEvent = { progress: number; phase: string; totalPhases: number }
+type TimelineExportErrorEvent = { error?: string }
+
+type TimelineExportRequest = {
+  videoClips: TimelineClip[]
+  audioClips: TimelineClip[]
+  isMuted: { video: boolean; audio: boolean }
+  outputPath: string
+  quality: 'high' | 'medium' | 'low'
+  clips: VideoClip[]
+}
+
 export function ExportModal(): React.JSX.Element | null {
+  const api = window.api as unknown as {
+    timelineExport: (params: TimelineExportRequest) => Promise<string>
+    onTimelineExportProgress: (callback: (data: TimelineExportProgressEvent) => void) => () => void
+    onTimelineExportError: (callback: (data: TimelineExportErrorEvent) => void) => () => void
+  } & typeof window.api
   // Store state
   const {
     selectedClip,
@@ -54,6 +73,13 @@ export function ExportModal(): React.JSX.Element | null {
       setFilename(`${baseName}_trimmed.mp4`)
     }
   }, [selectedClip, exportMode])
+
+  // Clear save location each time the modal is opened
+  useEffect(() => {
+    if (activeModal === 'export') {
+      setExportPath('')
+    }
+  }, [activeModal])
 
   // Update export status based on store state (single-clip path)
   useEffect(() => {
@@ -131,7 +157,7 @@ export function ExportModal(): React.JSX.Element | null {
     const trimmedDuration = trimEnd - trimStart
 
     // Call the actual FFmpeg export via IPC
-    await (window.api as any).trimExport({
+    await window.api.trimExport({
       inputPath: selectedClip.path,
       startTime: trimStart,
       endTime: trimEnd,
@@ -146,17 +172,19 @@ export function ExportModal(): React.JSX.Element | null {
   const handleTimelineExport = async (): Promise<void> => {
     // Reset and set up progress listeners for timeline export
     useEditorStore.getState().setTimelineExportProgress(0)
-    const unsubscribeProgress = (window.api as any).onTimelineExportProgress?.((data: any) => {
-      useEditorStore.getState().setTimelineExportProgress(Math.floor(data.progress))
-    })
-    const unsubscribeError = (window.api as any).onTimelineExportError?.((data: any) => {
+    const unsubscribeProgress = api.onTimelineExportProgress?.(
+      (data: TimelineExportProgressEvent) => {
+        useEditorStore.getState().setTimelineExportProgress(Math.floor(data.progress))
+      }
+    )
+    const unsubscribeError = api.onTimelineExportError?.((data: TimelineExportErrorEvent) => {
       setExportStatus('error')
       setErrorMessage(data?.error || 'Timeline export failed')
     })
 
     try {
       // Call timeline export with all necessary data
-      await (window.api as any).timelineExport({
+      await api.timelineExport({
         videoClips: timelineVideoClips,
         audioClips: timelineAudioClips,
         isMuted,
@@ -255,7 +283,7 @@ export function ExportModal(): React.JSX.Element | null {
                 value={filename}
                 onChange={(e) => setFilename(e.target.value)}
                 placeholder="clip_export.mp4"
-                disabled={isExporting}
+                disabled={isExporting || exportStatus === 'exporting'}
                 className="w-full bg-gray-800 text-white border-gray-600 placeholder-gray-400"
               />
             </div>
@@ -269,12 +297,12 @@ export function ExportModal(): React.JSX.Element | null {
                   value={exportPath}
                   onChange={(e) => setExportPath(e.target.value)}
                   placeholder="Choose export location"
-                  disabled={isExporting}
+                  disabled={isExporting || exportStatus === 'exporting'}
                   className="flex-1 bg-gray-800 text-white border-gray-600 placeholder-gray-400"
                 />
                 <Button
                   onClick={handleBrowse}
-                  disabled={isExporting}
+                  disabled={isExporting || exportStatus === 'exporting'}
                   variant="outline"
                   className="px-4 py-2 min-h-10 bg-gray-800 text-white border-gray-600 hover:bg-gray-700"
                 >
@@ -352,11 +380,11 @@ export function ExportModal(): React.JSX.Element | null {
             {exportStatus !== 'success' && (
               <Button
                 onClick={handleExport}
-                disabled={isExporting || !exportPath || !filename}
+                disabled={isExporting || exportStatus === 'exporting' || !exportPath || !filename}
                 className="flex-1 min-h-10 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-600 disabled:text-gray-400"
               >
                 <Download className="w-4 h-4 mr-2" />
-                {isExporting ? 'Exporting...' : 'Export'}
+                {isExporting || exportStatus === 'exporting' ? 'Exporting...' : 'Export'}
               </Button>
             )}
           </div>
