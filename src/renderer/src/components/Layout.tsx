@@ -21,11 +21,9 @@ import { useEditorStore } from '../../../stores/editorStore'
  * - Smooth transitions
  * - Proper responsive spacing ensuring nothing goes out of bounds
  */
-export function Layout() {
+export function Layout(): React.ReactElement {
   const { clips } = useEditorStore()
-  const selectedClip = useEditorStore((state) => state.selectedClip)
   const timelineVideoClips = useEditorStore((state) => state.timelineVideoClips)
-  const timelineAudioClips = useEditorStore((state) => state.timelineAudioClips)
   const setActiveModal = useEditorStore((state) => state.setActiveModal)
   const [sidebarTab, setSidebarTab] = useState<'library' | 'recording'>('library')
 
@@ -118,9 +116,7 @@ export function Layout() {
           >
             <Button
               onClick={() => setActiveModal('export')}
-              disabled={
-                !selectedClip && timelineVideoClips.length === 0 && timelineAudioClips.length === 0
-              }
+              disabled={timelineVideoClips.length === 0}
               className="w-full text-xs py-1.5"
             >
               <Download className="w-3 h-3 mr-2" />
