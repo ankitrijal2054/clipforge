@@ -49,15 +49,15 @@ export function MediaLibrary() {
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <h3 className="text-sm font-semibold text-white">Library</h3>
         <span className="text-xs text-gray-400">
           {clips.length} video{clips.length !== 1 ? 's' : ''}
         </span>
       </div>
 
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      <div className="space-y-2 overflow-y-auto flex-1 min-h-0">
         {clips.map((clip) => (
           <motion.div
             key={clip.id}

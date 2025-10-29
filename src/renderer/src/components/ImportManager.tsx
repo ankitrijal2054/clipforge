@@ -196,16 +196,9 @@ export function ImportManager(): React.ReactElement {
   }, [])
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white">Import</h3>
-        <div className="text-xs text-gray-400">
-          {isImporting ? `Importing... (${importCount.current}/${importCount.total})` : ''}
-        </div>
-      </div>
-
+    <div className="space-y-0">
       <motion.div
-        className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-gray-600 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-all duration-200"
+        className="flex flex-col items-center justify-center p-2 border-2 border-dashed border-gray-600 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-all duration-200"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -218,27 +211,29 @@ export function ImportManager(): React.ReactElement {
         <motion.div
           animate={{ scale: isDragOver ? 1.1 : 1 }}
           transition={{ duration: 0.2 }}
-          className="mb-2"
+          className="mb-1"
         >
           {isImporting ? (
-            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-              <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+            <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+              <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
             </div>
           ) : (
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-lg flex items-center justify-center">
-              <Upload className="w-5 h-5 text-blue-400" />
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-lg flex items-center justify-center">
+              <Upload className="w-4 h-4 text-blue-400" />
             </div>
           )}
         </motion.div>
 
-        <h4 className="text-xs font-semibold text-white mb-1 text-center">
-          {isImporting ? 'Importing...' : 'Drop videos or'}
+        <h4 className="text-xs font-semibold text-white mb-0.5 text-center">
+          {isImporting
+            ? `Importing... (${importCount.current}/${importCount.total})`
+            : 'Drop videos or'}
         </h4>
 
         <button
           onClick={handleFilePicker}
           disabled={isImporting}
-          className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-1"
+          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-1"
         >
           <FileVideo className="w-3 h-3" />
           {isImporting ? 'Importing...' : 'Browse'}

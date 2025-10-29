@@ -38,7 +38,7 @@ export function Layout() {
         animate={{ x: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
-        <div className="p-6 border-b border-gray-700 flex-shrink-0">
+        <div className="p-2 border-b border-gray-700 flex-shrink-0">
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-16 h-16 rounded-lg flex items-center justify-center overflow-hidden">
               <img
@@ -59,11 +59,10 @@ export function Layout() {
             </div>
             <h1 className="text-xl font-bold text-white">ClipForge</h1>
           </div>
-          <p className="text-sm text-gray-400">Professional Video Trimming</p>
         </div>
 
         {/* Import Manager - at the top */}
-        <div className="px-4 py-3 border-b border-gray-700 flex-shrink-0">
+        <div className="px-3 py-2 border-b border-gray-700 flex-shrink-0">
           <ImportManager />
         </div>
 
