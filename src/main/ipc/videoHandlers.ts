@@ -1,4 +1,4 @@
-import { ipcMain, IpcMainInvokeEvent, dialog } from 'electron'
+import { ipcMain, IpcMainInvokeEvent, dialog, BrowserWindow } from 'electron'
 import { getVideoMetadata, getVideoThumbnail } from '../ffmpeg/metadata'
 import { trimAndExport, convertVideo, ExportProgress } from '../ffmpeg/operations'
 import { VideoMetadata } from '../../types/video'
@@ -36,7 +36,7 @@ export interface ConvertVideoParams {
 /**
  * Register all video-related IPC handlers
  */
-export function registerVideoHandlers(): void {
+export function registerVideoHandlers(mainWindow: BrowserWindow): void {
   // Get video metadata
   ipcMain.handle(
     'video:getMetadata',
@@ -121,8 +121,8 @@ export function registerVideoHandlers(): void {
   // File dialog for video selection
   ipcMain.handle('dialog:selectVideo', async () => {
     try {
-      const result = await dialog.showOpenDialog({
-        properties: ['openFile'],
+      const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile', 'multiSelections'],
         filters: [
           // Put combined Media first so audio (e.g., mp3) isn't disabled by default
           {
@@ -145,14 +145,14 @@ export function registerVideoHandlers(): void {
           { name: 'Audio', extensions: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg'] },
           { name: 'All Files', extensions: ['*'] }
         ],
-        title: 'Select Media File'
+        title: 'Select Media Files'
       })
 
       if (result.canceled || result.filePaths.length === 0) {
         return null
       }
 
-      return result.filePaths[0]
+      return result.filePaths
     } catch (error) {
       console.error('Failed to open file dialog:', error)
       throw error

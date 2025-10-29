@@ -47,7 +47,7 @@ const api = {
   },
 
   // File dialog operations (video or audio)
-  selectVideoFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectVideo'),
+  selectVideoFile: (): Promise<string[] | null> => ipcRenderer.invoke('dialog:selectVideo'),
 
   selectExportPath: (defaultFilename: string): Promise<string | null> =>
     ipcRenderer.invoke('dialog:selectExportPath', defaultFilename),
