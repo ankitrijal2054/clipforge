@@ -54,6 +54,15 @@ declare global {
       getRecordingQualitySettings: () => Promise<Record<string, RecordingQuality>>
       cleanupRecordings: () => Promise<{ success: boolean; cleanedFiles?: number; error?: string }>
 
+      // Recording file management (auto-import, metadata, cleanup)
+      getRecordedVideos: () => Promise<any[]>
+      importRecording: (
+        filePath: string,
+        metadata?: any
+      ) => Promise<{ success: boolean; clipData?: any; error?: string }>
+      getRecordingMetadata: (filePath: string) => Promise<any | null>
+      deleteRecording: (filePath: string) => Promise<{ success: boolean; error?: string }>
+
       // Recording event listeners
       onRecordingStateChanged: (callback: (state: RecordingState) => void) => () => void
       onRecordingStopped: (

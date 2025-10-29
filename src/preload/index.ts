@@ -87,6 +87,21 @@ const api = {
   cleanupRecordings: (): Promise<{ success: boolean; cleanedFiles?: number; error?: string }> =>
     ipcRenderer.invoke('recording:cleanup'),
 
+  // Recording file management (auto-import, metadata, cleanup)
+  getRecordedVideos: (): Promise<any[]> => ipcRenderer.invoke('recording:getRecordedVideos'),
+
+  importRecording: (
+    filePath: string,
+    metadata?: any
+  ): Promise<{ success: boolean; clipData?: any; error?: string }> =>
+    ipcRenderer.invoke('recording:importRecording', filePath, metadata),
+
+  getRecordingMetadata: (filePath: string): Promise<any | null> =>
+    ipcRenderer.invoke('recording:getMetadata', filePath),
+
+  deleteRecording: (filePath: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('recording:delete', filePath),
+
   // Recording event listeners
   onRecordingStateChanged: (callback: (state: RecordingState) => void): (() => void) => {
     const handler = (_event: any, state: RecordingState) => callback(state)

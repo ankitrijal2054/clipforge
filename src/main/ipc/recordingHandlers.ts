@@ -1,9 +1,12 @@
 // Recording IPC handlers for Phase 2
 import { ipcMain, desktopCapturer } from 'electron'
 import { join } from 'path'
-import { writeFile, mkdir } from 'fs/promises'
+import { writeFile, mkdir, readdir, unlink, stat } from 'fs/promises'
 import { app } from 'electron'
 import type { ScreenSource, RecordingOptions } from '../../types/recording'
+
+// Import FFmpeg metadata extraction
+import { getVideoMetadata } from '../ffmpeg'
 
 // Recording state management
 let recordingState = {
@@ -14,6 +17,200 @@ let recordingState = {
   pauseTime: null as number | null,
   totalPauseDuration: 0
 }
+
+// Recording metadata storage
+interface RecordingMetadata {
+  filePath: string
+  startTime: number
+  duration: number
+  resolution: { width: number; height: number }
+  frameRate: number
+  bitrate: number
+  recordingType: string
+  audioSettings?: {
+    deviceId?: string
+    label?: string
+  }
+}
+
+const recordingMetadata: Map<string, RecordingMetadata> = new Map()
+
+// Get recordings directory
+function getRecordingsDirectory(): string {
+  return join(app.getPath('temp'), 'clipforge', 'recordings')
+}
+
+// Get recorded videos for import
+ipcMain.handle('recording:getRecordedVideos', async (): Promise<any[]> => {
+  try {
+    const recordingsDir = getRecordingsDirectory()
+    await mkdir(recordingsDir, { recursive: true })
+
+    const files = await readdir(recordingsDir)
+    const recordedVideos = []
+
+    for (const file of files) {
+      if (!file.endsWith('.webm') && !file.endsWith('.mp4')) continue
+
+      const filePath = join(recordingsDir, file)
+      const stats = await stat(filePath)
+
+      try {
+        const metadata = await getVideoMetadata(filePath)
+        recordedVideos.push({
+          name: file,
+          path: filePath,
+          fileSize: stats.size,
+          duration: metadata.duration,
+          width: metadata.width,
+          height: metadata.height,
+          bitRate: metadata.bitRate || 0,
+          recordedAt: stats.mtimeMs
+        })
+      } catch (err) {
+        console.warn(`Failed to extract metadata for ${file}:`, err)
+      }
+    }
+
+    return recordedVideos.sort((a, b) => b.recordedAt - a.recordedAt)
+  } catch (error) {
+    console.error('Error getting recorded videos:', error)
+    throw new Error('Failed to get recorded videos')
+  }
+})
+
+// Import recording to media library
+ipcMain.handle(
+  'recording:importRecording',
+  async (
+    _event,
+    filePath: string,
+    metadata?: RecordingMetadata
+  ): Promise<{ success: boolean; clipData?: any; error?: string }> => {
+    try {
+      // Extract metadata if not provided
+      let clipMetadata = metadata
+      if (!clipMetadata) {
+        const videoMetadata = await getVideoMetadata(filePath)
+        const stats = await stat(filePath)
+
+        clipMetadata = {
+          filePath,
+          startTime: Date.now(),
+          duration: videoMetadata.duration,
+          resolution: { width: videoMetadata.width, height: videoMetadata.height },
+          frameRate: videoMetadata.frameRate || 30,
+          bitrate: videoMetadata.bitRate || 0,
+          recordingType: recordingState.recordingType || 'unknown'
+        }
+      }
+
+      // Store metadata
+      recordingMetadata.set(filePath, clipMetadata)
+
+      // Create clip data for media library
+      const clipId = `clip-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      const filename = filePath.split('/').pop() || 'recording.webm'
+
+      const clipData = {
+        id: clipId,
+        name: filename,
+        path: filePath,
+        duration: clipMetadata.duration,
+        width: clipMetadata.resolution.width,
+        height: clipMetadata.resolution.height,
+        fileSize: (await stat(filePath)).size,
+        bitRate: clipMetadata.bitrate,
+        recordingType: clipMetadata.recordingType,
+        recordedAt: clipMetadata.startTime
+      }
+
+      console.log('✓ Recording imported to media library:', clipData)
+
+      return { success: true, clipData }
+    } catch (error) {
+      console.error('Error importing recording:', error)
+      return { success: false, error: 'Failed to import recording' }
+    }
+  }
+)
+
+// Get recording metadata
+ipcMain.handle(
+  'recording:getMetadata',
+  async (_event, filePath: string): Promise<RecordingMetadata | null> => {
+    try {
+      const cached = recordingMetadata.get(filePath)
+      if (cached) return cached
+
+      const videoMetadata = await getVideoMetadata(filePath)
+      const stats = await stat(filePath)
+
+      const metadata: RecordingMetadata = {
+        filePath,
+        startTime: stats.mtimeMs,
+        duration: videoMetadata.duration,
+        resolution: { width: videoMetadata.width, height: videoMetadata.height },
+        frameRate: videoMetadata.frameRate || 30,
+        bitrate: videoMetadata.bitRate || 0,
+        recordingType: recordingState.recordingType || 'unknown'
+      }
+
+      recordingMetadata.set(filePath, metadata)
+      return metadata
+    } catch (error) {
+      console.error('Error getting recording metadata:', error)
+      return null
+    }
+  }
+)
+
+// Cleanup old recordings (remove files older than 7 days)
+ipcMain.handle(
+  'recording:cleanup',
+  async (): Promise<{ success: boolean; cleanedFiles?: number; error?: string }> => {
+    try {
+      const recordingsDir = getRecordingsDirectory()
+      const files = await readdir(recordingsDir)
+
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+      let cleanedCount = 0
+
+      for (const file of files) {
+        const filePath = join(recordingsDir, file)
+        const stats = await stat(filePath)
+
+        if (stats.mtimeMs < sevenDaysAgo) {
+          await unlink(filePath)
+          recordingMetadata.delete(filePath)
+          cleanedCount++
+          console.log(`Cleaned up old recording: ${file}`)
+        }
+      }
+
+      return { success: true, cleanedFiles: cleanedCount }
+    } catch (error) {
+      console.error('Error cleaning up recordings:', error)
+      return { success: false, error: 'Failed to cleanup recordings' }
+    }
+  }
+)
+
+// Delete specific recording
+ipcMain.handle(
+  'recording:delete',
+  async (_event, filePath: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await unlink(filePath)
+      recordingMetadata.delete(filePath)
+      console.log(`Deleted recording: ${filePath}`)
+      return { success: true }
+    } catch (error) {
+      console.error('Error deleting recording:', error)
+      return { success: false, error: 'Failed to delete recording' }
+    }
+  }
+)
 
 // Get available screen and window sources
 ipcMain.handle('recording:getSources', async (): Promise<ScreenSource[]> => {
@@ -209,21 +406,6 @@ ipcMain.handle('recording:getQualitySettings', async (): Promise<any> => {
   }
 })
 
-// Clean up old recordings
-ipcMain.handle(
-  'recording:cleanup',
-  async (): Promise<{ success: boolean; cleanedFiles?: number; error?: string }> => {
-    try {
-      // This would implement cleanup logic for old recording files
-      // For now, just return success
-      return { success: true, cleanedFiles: 0 }
-    } catch (error) {
-      console.error('Error cleaning up recordings:', error)
-      return { success: false, error: 'Failed to cleanup recordings' }
-    }
-  }
-)
-
 // Export the handlers for registration
 export const recordingHandlers = {
   'recording:getSources': 'recording:getSources',
@@ -235,5 +417,9 @@ export const recordingHandlers = {
   'recording:getState': 'recording:getState',
   'recording:saveData': 'recording:saveData',
   'recording:getQualitySettings': 'recording:getQualitySettings',
-  'recording:cleanup': 'recording:cleanup'
+  'recording:cleanup': 'recording:cleanup',
+  'recording:getRecordedVideos': 'recording:getRecordedVideos',
+  'recording:importRecording': 'recording:importRecording',
+  'recording:getMetadata': 'recording:getMetadata',
+  'recording:delete': 'recording:delete'
 }

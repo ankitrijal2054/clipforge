@@ -2,6 +2,7 @@
 // Simple, clean interface for all recording modes
 import React from 'react'
 import { useRecording } from '../../hooks/useRecording'
+import { RecordingImporter } from './RecordingImporter'
 import { Button } from '../../../../components/ui/button'
 import { Mic, MonitorPlay, Video, Play, Pause, Square, AlertCircle } from 'lucide-react'
 
@@ -210,7 +211,7 @@ export const RecordingPanel: React.FC = () => {
           )}
 
           {/* Recording Controls */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-4">
             {!recording.isRecording ? (
               <Button
                 onClick={recording.startRecording}
@@ -255,6 +256,11 @@ export const RecordingPanel: React.FC = () => {
                 </Button>
               </>
             )}
+          </div>
+
+          {/* Recording Importer */}
+          <div className="border-t border-gray-700 pt-4">
+            <RecordingImporter />
           </div>
         </div>
       </div>

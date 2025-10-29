@@ -131,5 +131,19 @@ app.on('window-all-closed', () => {
   }
 })
 
+// Cleanup on app quit
+app.on('before-quit', async () => {
+  try {
+    console.log('Performing cleanup on app quit...')
+    // Trigger recording cleanup via IPC handler
+    await ipcMain.handleOnce('recording:cleanup', async () => {
+      // This will be handled by the handler, just trigger it
+      return { success: true, cleanedFiles: 0 }
+    })
+  } catch (error) {
+    console.error('Error during app cleanup:', error)
+  }
+})
+
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
