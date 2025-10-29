@@ -1,16 +1,10 @@
 import React, { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Upload, FileVideo, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Upload, FileVideo, Loader2 } from 'lucide-react'
 import { useEditorStore } from '../../../stores/editorStore'
 import { isValidMediaFile } from '../../../utils/validators'
 import { VideoClip } from '../../../types/video'
 import { useToast } from '../../../hooks/use-toast'
-
-interface ImportProgress {
-  fileName: string
-  status: 'pending' | 'importing' | 'success' | 'error'
-  error?: string
-}
 
 /**
  * ImportManager component for importing video files
@@ -23,10 +17,10 @@ interface ImportProgress {
  * - Loading states
  * - Error handling
  */
-export function ImportManager() {
+export function ImportManager(): React.ReactElement {
   const [isDragOver, setIsDragOver] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
-  const [importProgress, setImportProgress] = useState<ImportProgress[]>([])
+  const [importCount, setImportCount] = useState({ current: 0, total: 0 })
   const { addClip } = useEditorStore()
   const { toast } = useToast()
 
@@ -64,45 +58,25 @@ export function ImportManager() {
   )
 
   const handleMultipleFileImport = useCallback(
-    async (filePaths: string[]) => {
+    async (filePaths: string[]): Promise<void> => {
       if (filePaths.length === 0) return
 
       setIsImporting(true)
-      const progress: ImportProgress[] = filePaths.map((filePath) => ({
-        fileName: filePath.split('/').pop() || filePath,
-        status: 'pending'
-      }))
-      setImportProgress(progress)
+      setImportCount({ current: 0, total: filePaths.length })
 
       let successCount = 0
       let failureCount = 0
-      const failedFiles: { name: string; error: string }[] = []
 
       // Import files sequentially
       for (let i = 0; i < filePaths.length; i++) {
         const filePath = filePaths[i]
-        const fileName = filePath.split('/').pop() || filePath
 
-        // Update current file to importing
-        setImportProgress((prev) => {
-          const updated = [...prev]
-          updated[i] = { ...updated[i], status: 'importing' }
-          return updated
-        })
+        // Update counter
+        setImportCount({ current: i + 1, total: filePaths.length })
 
         // Validate file
         if (!isValidMediaFile(filePath)) {
-          setImportProgress((prev) => {
-            const updated = [...prev]
-            updated[i] = {
-              ...updated[i],
-              status: 'error',
-              error: 'Invalid file type'
-            }
-            return updated
-          })
           failureCount++
-          failedFiles.push({ name: fileName, error: 'Invalid file type' })
           continue
         }
 
@@ -110,24 +84,9 @@ export function ImportManager() {
         const success = await handleFileImport(filePath)
 
         if (success) {
-          setImportProgress((prev) => {
-            const updated = [...prev]
-            updated[i] = { ...updated[i], status: 'success' }
-            return updated
-          })
           successCount++
         } else {
-          setImportProgress((prev) => {
-            const updated = [...prev]
-            updated[i] = {
-              ...updated[i],
-              status: 'error',
-              error: 'Failed to import'
-            }
-            return updated
-          })
           failureCount++
-          failedFiles.push({ name: fileName, error: 'Failed to import' })
         }
       }
 
@@ -152,11 +111,6 @@ export function ImportManager() {
           description: `Failed to import ${failureCount} file${failureCount === 1 ? '' : 's'}`,
           variant: 'destructive'
         })
-      }
-
-      // Clear progress after 2 seconds if all successful
-      if (failureCount === 0) {
-        setTimeout(() => setImportProgress([]), 2000)
       }
     },
     [handleFileImport, toast]
@@ -216,9 +170,7 @@ export function ImportManager() {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white">Import</h3>
         <div className="text-xs text-gray-400">
-          {isImporting
-            ? `Importing... (${importProgress.filter((p) => p.status === 'success').length}/${importProgress.length})`
-            : ''}
+          {isImporting ? `Importing... (${importCount.current}/${importCount.total})` : ''}
         </div>
       </div>
 
@@ -262,34 +214,6 @@ export function ImportManager() {
           {isImporting ? 'Importing...' : 'Browse'}
         </button>
       </motion.div>
-
-      {/* Import progress list */}
-      {importProgress.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="mt-2 p-2 bg-gray-800/50 rounded-lg space-y-1 max-h-40 overflow-y-auto"
-        >
-          {importProgress.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-2 text-xs text-gray-300 p-1.5 bg-gray-700/30 rounded"
-            >
-              {item.status === 'pending' && (
-                <div className="w-4 h-4 rounded-full border-2 border-gray-500 border-t-blue-400 animate-spin" />
-              )}
-              {item.status === 'importing' && (
-                <div className="w-4 h-4 rounded-full border-2 border-gray-500 border-t-blue-400 animate-spin" />
-              )}
-              {item.status === 'success' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-              {item.status === 'error' && <AlertCircle className="w-4 h-4 text-red-500" />}
-              <span className="flex-1 truncate">{item.fileName}</span>
-              {item.error && <span className="text-red-400 text-xs">{item.error}</span>}
-            </div>
-          ))}
-        </motion.div>
-      )}
     </div>
   )
 }
