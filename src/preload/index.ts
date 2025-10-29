@@ -115,6 +115,12 @@ const api = {
     const handler = (_event: any, data: { filePath: string; duration: number }) => callback(data)
     ipcRenderer.on('recording:stopped', handler)
     return () => ipcRenderer.removeListener('recording:stopped', handler)
+  },
+
+  onRecordingDataSaved: (callback: (data: { filePath: string }) => void): (() => void) => {
+    const handler = (_event: any, data: { filePath: string }) => callback(data)
+    ipcRenderer.on('recording:dataSaved', handler)
+    return () => ipcRenderer.removeListener('recording:dataSaved', handler)
   }
 }
 

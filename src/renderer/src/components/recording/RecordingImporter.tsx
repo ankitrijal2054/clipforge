@@ -41,6 +41,46 @@ export const RecordingImporter: React.FC = () => {
     loadRecordings()
   }, [loadRecordings])
 
+  // Listen for recording stopped events and auto-refresh
+  useEffect(() => {
+    const unsubscribe = (window.api as any).onRecordingStopped(
+      async (data: { filePath: string; duration: number }) => {
+        console.log('Recording stopped, refreshing recent recordings list:', data)
+        // Wait a bit for file system to be ready, then refresh
+        setTimeout(() => {
+          loadRecordings()
+        }, 500)
+      }
+    )
+
+    return () => {
+      unsubscribe?.()
+    }
+  }, [loadRecordings])
+
+  // Listen for recording data saved events (from useScreenRecorder)
+  useEffect(() => {
+    // Check if the function exists before trying to use it
+    if (typeof (window.api as any)?.onRecordingDataSaved !== 'function') {
+      console.log('onRecordingDataSaved not available yet, skipping listener setup')
+      return
+    }
+
+    const unsubscribe = (window.api as any).onRecordingDataSaved(
+      async (data: { filePath: string }) => {
+        console.log('✓ Recording data saved, refreshing recent recordings:', data.filePath)
+        // Wait a bit for file system to be ready, then refresh
+        setTimeout(() => {
+          loadRecordings()
+        }, 300)
+      }
+    )
+
+    return () => {
+      unsubscribe?.()
+    }
+  }, [loadRecordings])
+
   // Handle import
   const handleImport = useCallback(
     async (video: RecordedVideo) => {

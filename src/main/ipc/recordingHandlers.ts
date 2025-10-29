@@ -373,7 +373,7 @@ ipcMain.handle('recording:getState', async (): Promise<typeof recordingState> =>
 ipcMain.handle(
   'recording:saveData',
   async (
-    _event,
+    event,
     data: ArrayBuffer,
     fileName: string
   ): Promise<{ success: boolean; filePath?: string; error?: string }> => {
@@ -386,6 +386,12 @@ ipcMain.handle(
       // Write the recording data
       const buffer = Buffer.from(data)
       await writeFile(outputPath, buffer)
+
+      // Send recording saved event to notify RecordingImporter
+      // Use a small delay to ensure file system is ready
+      setImmediate(() => {
+        event.sender.send('recording:dataSaved', { filePath: outputPath })
+      })
 
       return { success: true, filePath: outputPath }
     } catch (error) {

@@ -68,6 +68,7 @@ declare global {
       onRecordingStopped: (
         callback: (data: { filePath: string; duration: number }) => void
       ) => () => void
+      onRecordingDataSaved: (callback: (data: { filePath: string }) => void) => () => void
     }
   }
 }
