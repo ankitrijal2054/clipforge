@@ -231,7 +231,7 @@ export const Timeline: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedClipId, timelineCurrentTime, timelineVideoClips, splitClip, removeClipFromTrack])
 
-  const playheadPixelPosition = TRACK_HEADER_WIDTH + timelineCurrentTime * pixelsPerSecond
+  const playheadPixelPosition = TRACK_HEADER_WIDTH + timelineCurrentTime * pixelsPerSecond + 10
 
   return (
     <div className="timeline-container">
@@ -302,6 +302,7 @@ export const Timeline: React.FC = () => {
           }}
           onMouseDown={handlePlayheadMouseDown}
         >
+          <div className="playhead-handle" />
           <div className="playhead-line" />
           <div className="playhead-time">{formatTime(timelineCurrentTime)}</div>
         </div>
