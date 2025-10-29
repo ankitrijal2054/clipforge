@@ -19,9 +19,10 @@ const ZOOM_MIN = 0.1 // 10% zoom
 const ZOOM_MAX = 10 // 1000% zoom
 const ZOOM_STEP = 0.1
 const TIME_MARKER_INTERVAL_BASE = 300 // 5 minutes at default zoom
+const TRACK_HEADER_WIDTH = 160 // Width of track header in pixels
 
 /**
- * Helper to format time as MM:SS
+ * Helper to format time as HH:MM:SS
  */
 const formatTime = (seconds: number): string => {
   const hours = Math.floor(seconds / 3600)
@@ -38,7 +39,6 @@ const formatTime = (seconds: number): string => {
  * Calculate time marker interval based on zoom level
  */
 const getTimeMarkerInterval = (zoomLevel: number): number => {
-  // At zoom 1x, every 5 minutes. Higher zoom = more frequent markers
   if (zoomLevel <= 0.5) return 600 // 10 min
   if (zoomLevel <= 1) return 300 // 5 min
   if (zoomLevel <= 2) return 120 // 2 min
@@ -58,14 +58,14 @@ const generateTimeMarkers = (duration: number, interval: number): number[] => {
 }
 
 /**
- * Main Timeline Component with Zoom Support
+ * Main Timeline Component with Unified Scroll
  */
 export const Timeline: React.FC = () => {
   const { timelineVideoClips, timelineAudioClips, selectedClipId } = useTimelineClips()
   const { selectTimelineClip, toggleTrackMute, addClipToTrack } = useMultiClipTimelineActions()
   const isMuted = useTimelineTrackMute()
 
-  const timelineScrollRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [playheadTime, setPlayheadTime] = useState(0)
   const [dragOverTrack, setDragOverTrack] = useState<'video' | 'audio' | null>(null)
   const [zoomLevel, setZoomLevel] = useState(1) // 100% = 1x
@@ -85,16 +85,18 @@ export const Timeline: React.FC = () => {
 
   const totalDuration = calculateDuration()
   const pixelsPerSecond = DEFAULT_PIXELS_PER_SECOND * zoomLevel
-  const timelineWidth = Math.max(totalDuration * pixelsPerSecond, 1400) // Min 1400px
+  const contentWidth = totalDuration * pixelsPerSecond
+  const timelineWidth = Math.max(contentWidth, 1400) // Min 1400px for container size
   const timeMarkerInterval = getTimeMarkerInterval(zoomLevel)
   const timeMarkers = generateTimeMarkers(totalDuration, timeMarkerInterval)
 
   // Handle playhead click to seek
   const handlePlayheadClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!timelineScrollRef.current) return
-    const rect = timelineScrollRef.current.getBoundingClientRect()
-    const clickX = e.clientX - rect.left + timelineScrollRef.current.scrollLeft
-    const time = clickX / pixelsPerSecond
+    if (!scrollContainerRef.current) return
+    const rect = scrollContainerRef.current.getBoundingClientRect()
+    const clickX = e.clientX - rect.left + scrollContainerRef.current.scrollLeft
+    const timeX = clickX - TRACK_HEADER_WIDTH // Account for header spacer
+    const time = Math.max(0, timeX / pixelsPerSecond)
     setPlayheadTime(Math.max(0, Math.min(time, totalDuration)))
   }
 
@@ -201,87 +203,89 @@ export const Timeline: React.FC = () => {
         </div>
       </div>
 
-      {/* Timeline Header with Time Markers */}
-      <div className="timeline-header-container">
-        <div className="timeline-header" style={{ width: `${timelineWidth}px` }}>
-          {timeMarkers.map((time) => (
-            <div key={time} className="time-marker" style={{ left: `${time * pixelsPerSecond}px` }}>
-              <div className="marker-line" />
-              <span className="time-label">{formatTime(time)}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Timeline Tracks - Scrollable */}
-      <div className="timeline-scroll-container" ref={timelineScrollRef} onWheel={handleWheel}>
-        {/* Video Track */}
-        <div className="track-section">
-          <TrackHeader
-            trackType="video"
-            isMuted={isMuted.video}
-            onToggleMute={() => toggleTrackMute('video')}
-          />
-          <div
-            className={`track video-track ${dragOverTrack === 'video' ? 'drag-over' : ''}`}
-            onDragOver={(e) => handleDragOver(e, 'video')}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, 'video')}
-          >
-            <div
-              className="clip-container"
-              style={{ width: `${timelineWidth}px`, position: 'relative' }}
-            >
-              {timelineVideoClips.map((clip) => (
-                <TimelineClip
-                  key={clip.id}
-                  clip={clip}
-                  isSelected={selectedClipId === clip.id}
-                  onSelect={() => selectTimelineClip(clip.id)}
-                  pixelsPerSecond={pixelsPerSecond}
-                />
-              ))}
-            </div>
+      {/* UNIFIED Scroll Container for Header and Tracks */}
+      <div className="timeline-scroll-container" ref={scrollContainerRef} onWheel={handleWheel}>
+        {/* Header with Time Markers */}
+        <div className="timeline-header-row" style={{ width: `${timelineWidth}px` }}>
+          <div className="header-spacer" style={{ width: `${TRACK_HEADER_WIDTH}px` }} />
+          <div className="timeline-header">
+            {timeMarkers.map((time) => (
+              <div
+                key={time}
+                className="time-marker"
+                style={{ left: `${time * pixelsPerSecond}px` }}
+              >
+                <div className="marker-line" />
+                <span className="time-label">{formatTime(time)}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Audio Track */}
-        <div className="track-section">
-          <TrackHeader
-            trackType="audio"
-            isMuted={isMuted.audio}
-            onToggleMute={() => toggleTrackMute('audio')}
-          />
-          <div
-            className={`track audio-track ${dragOverTrack === 'audio' ? 'drag-over' : ''}`}
-            onDragOver={(e) => handleDragOver(e, 'audio')}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, 'audio')}
-          >
+        {/* Tracks Container */}
+        <div className="tracks-container" style={{ width: `${timelineWidth}px` }}>
+          {/* Video Track */}
+          <div className="track-section">
+            <TrackHeader
+              trackType="video"
+              isMuted={isMuted.video}
+              onToggleMute={() => toggleTrackMute('video')}
+            />
             <div
-              className="clip-container"
-              style={{ width: `${timelineWidth}px`, position: 'relative' }}
+              className={`track video-track ${dragOverTrack === 'video' ? 'drag-over' : ''}`}
+              onDragOver={(e) => handleDragOver(e, 'video')}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, 'video')}
             >
-              {timelineAudioClips.map((clip) => (
-                <TimelineClip
-                  key={clip.id}
-                  clip={clip}
-                  isSelected={selectedClipId === clip.id}
-                  onSelect={() => selectTimelineClip(clip.id)}
-                  pixelsPerSecond={pixelsPerSecond}
-                />
-              ))}
+              <div className="clip-container" style={{ position: 'relative', height: '100%' }}>
+                {timelineVideoClips.map((clip) => (
+                  <TimelineClip
+                    key={clip.id}
+                    clip={clip}
+                    isSelected={selectedClipId === clip.id}
+                    onSelect={() => selectTimelineClip(clip.id)}
+                    pixelsPerSecond={pixelsPerSecond}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Audio Track */}
+          <div className="track-section">
+            <TrackHeader
+              trackType="audio"
+              isMuted={isMuted.audio}
+              onToggleMute={() => toggleTrackMute('audio')}
+            />
+            <div
+              className={`track audio-track ${dragOverTrack === 'audio' ? 'drag-over' : ''}`}
+              onDragOver={(e) => handleDragOver(e, 'audio')}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, 'audio')}
+            >
+              <div className="clip-container" style={{ position: 'relative', height: '100%' }}>
+                {timelineAudioClips.map((clip) => (
+                  <TimelineClip
+                    key={clip.id}
+                    clip={clip}
+                    isSelected={selectedClipId === clip.id}
+                    onSelect={() => selectTimelineClip(clip.id)}
+                    pixelsPerSecond={pixelsPerSecond}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Playhead - Absolute positioned over scrollable area */}
-      <div className="playhead-wrapper">
+      {/* Playhead - Positioned relative to scroll container */}
+      <div className="playhead-wrapper" ref={scrollContainerRef}>
         <div
           className="playhead"
           style={{
-            left: `${playheadTime * pixelsPerSecond}px`,
+            left: `${TRACK_HEADER_WIDTH + playheadTime * pixelsPerSecond}px`,
             height: '100%'
           }}
           onClick={handlePlayheadClick}

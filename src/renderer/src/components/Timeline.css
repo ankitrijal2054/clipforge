@@ -11,7 +11,7 @@
   overflow: hidden;
 }
 
-/* Zoom Controls and Info */
+/* Zoom Controls */
 .timeline-controls {
   display: flex;
   align-items: center;
@@ -74,17 +74,34 @@
   color: #9ca3af;
 }
 
-/* Timeline Header with Time Markers */
-.timeline-header-container {
+/* UNIFIED Scroll Container - Contains both header and tracks */
+.timeline-scroll-container {
   display: flex;
-  height: 50px;
+  flex-direction: column;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  background-color: #0f1419;
   border: 1px solid #374151;
   border-radius: 4px;
-  background-color: #111827;
-  overflow-x: auto;
-  overflow-y: hidden;
-  flex-shrink: 0;
   position: relative;
+}
+
+/* Header Row - Same width as tracks, scrolls with tracks */
+.timeline-header-row {
+  display: flex;
+  flex-shrink: 0;
+  height: 50px;
+  border-bottom: 1px solid #374151;
+  background-color: #111827;
+  position: relative;
+}
+
+.header-spacer {
+  display: block;
+  flex-shrink: 0;
+  background-color: #111827;
+  border-right: 1px solid #374151;
 }
 
 .timeline-header {
@@ -92,6 +109,7 @@
   position: relative;
   height: 100%;
   background-color: #111827;
+  flex: 1;
 }
 
 .time-marker {
@@ -121,18 +139,12 @@
   font-weight: 500;
 }
 
-/* Scrollable Timeline Container */
-.timeline-scroll-container {
+/* Tracks Container - Same width as header, scrolls with header */
+.tracks-container {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
-  overflow-x: auto;
-  overflow-y: auto;
-  position: relative;
-  background-color: #0f1419;
-  border: 1px solid #374151;
-  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .track-section {
@@ -168,19 +180,18 @@
 }
 
 .clip-container {
-  position: relative;
   display: flex;
   align-items: center;
   height: 100%;
 }
 
-/* Playhead Wrapper - Fixed positioning over scrollable area */
+/* Playhead Wrapper - Fixed positioning over scroll area */
 .playhead-wrapper {
   position: absolute;
   top: 0;
-  left: 0;
   right: 0;
   bottom: 0;
+  left: 0;
   pointer-events: none;
   z-index: 20;
 }
@@ -223,23 +234,6 @@
 }
 
 /* Custom Scrollbars */
-.timeline-header-container::-webkit-scrollbar {
-  height: 6px;
-}
-
-.timeline-header-container::-webkit-scrollbar-track {
-  background-color: #111827;
-}
-
-.timeline-header-container::-webkit-scrollbar-thumb {
-  background-color: #4b5563;
-  border-radius: 3px;
-}
-
-.timeline-header-container::-webkit-scrollbar-thumb:hover {
-  background-color: #6b7280;
-}
-
 .timeline-scroll-container::-webkit-scrollbar {
   height: 8px;
   width: 8px;
