@@ -226,7 +226,19 @@ export function useScreenRecorder() {
         // Handle stop
         mediaRecorder.onstop = async () => {
           console.log('MediaRecorder stopped, total chunks:', chunks.length)
+          console.log(
+            'Chunks data:',
+            chunks.map((c) => c.size)
+          )
+
+          if (chunks.length === 0) {
+            console.error('ERROR: No data chunks collected during recording!')
+            return
+          }
+
           const recordingData = new Blob(chunks, { type: mimeType })
+          console.log('Created blob, size:', recordingData.size)
+
           setState((prev) => ({
             ...prev,
             recordingData,
@@ -236,15 +248,37 @@ export function useScreenRecorder() {
           // Save the recording
           try {
             const fileName = `recording-${Date.now()}.webm`
-            console.log('Saving recording to:', fileName)
-            await (window.api as any).saveRecordingData(await recordingData.arrayBuffer(), fileName)
-            console.log('Recording saved successfully')
+            console.log('Preparing to save recording...')
+            console.log('File name:', fileName)
+            console.log('Blob size:', recordingData.size)
+
+            const arrayBuffer = await recordingData.arrayBuffer()
+            console.log('Converted to ArrayBuffer, size:', arrayBuffer.byteLength)
+
+            const result = await (window.api as any).saveRecordingData(arrayBuffer, fileName)
+            console.log('IPC saveRecordingData result:', result)
+
+            if (result.success) {
+              console.log('✅ Recording saved successfully to:', result.filePath)
+            } else {
+              console.error('❌ IPC error:', result.error)
+            }
           } catch (error) {
-            console.error('Failed to save recording:', error)
+            console.error('❌ Failed to save recording:', error)
+            console.error('Error details:', {
+              name: error instanceof Error ? error.name : 'unknown',
+              message: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : 'no stack'
+            })
           }
 
           // Stop all tracks
-          recordingStream.getTracks().forEach((track) => track.stop())
+          console.log('Stopping all tracks...')
+          recordingStream.getTracks().forEach((track) => {
+            console.log('Stopping track:', track.kind, track.label)
+            track.stop()
+          })
+          console.log('All tracks stopped')
         }
 
         // Handle error
