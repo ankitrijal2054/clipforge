@@ -1,0 +1,55 @@
+.track-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  width: 160px;
+  min-width: 160px;
+  background-color: #111827;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.track-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mute-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.mute-button:hover {
+  background-color: #374151;
+  color: #d1d5db;
+}
+
+.mute-button.muted {
+  background-color: #dc2626;
+  border-color: #b91c1c;
+  color: #fff;
+}
+
+.mute-button.muted:hover {
+  background-color: #b91c1c;
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.3);
+}

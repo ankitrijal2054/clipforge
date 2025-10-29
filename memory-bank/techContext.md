@@ -92,7 +92,7 @@ src/main/
 └── ipc/
     ├── index.ts          # IPC handler registration
     ├── videoHandlers.ts  # Video-related IPC handlers
-    └── exportHandlers.ts # Export-related IPC handlers
+    └── exportHandlers.ts # Export-related IPC handlers (timeline:export, progress, error)
 ```
 
 ### **Renderer Process (React)**
@@ -131,6 +131,19 @@ src/types/
 ├── store.ts              # Store state types
 └── video.ts              # Video processing types
 ```
+
+## IPC Channels (Export)
+
+- `video:trimExport` — single-clip trim export with progress events `video:exportProgress`
+- `timeline:export` — multi-clip timeline export with events:
+  - `timeline:export-progress` — phased progress updates
+  - `timeline:export-error` — error propagation to renderer
+
+Preload exposes:
+
+- `timelineExport(params)`
+- `onTimelineExportProgress(cb)`
+- `onTimelineExportError(cb)`
 
 ## Build Configuration
 

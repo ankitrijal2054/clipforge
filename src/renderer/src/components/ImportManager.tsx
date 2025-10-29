@@ -1,8 +1,8 @@
 import React, { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Upload, FileVideo, Loader2 } from 'lucide-react'
+import { Upload, FileVideo, Loader2, Music } from 'lucide-react'
 import { useEditorStore } from '../../../stores/editorStore'
-import { isValidVideoFile } from '../../../utils/validators'
+import { isValidMediaFile } from '../../../utils/validators'
 import { VideoClip } from '../../../types/video'
 import { useToast } from '../../../hooks/use-toast'
 
@@ -24,10 +24,10 @@ export function ImportManager() {
 
   const handleFileImport = useCallback(
     async (filePath: string) => {
-      if (!isValidVideoFile(filePath)) {
+      if (!isValidMediaFile(filePath)) {
         toast({
           title: 'Invalid File',
-          description: 'Please select a valid video file (MP4, MOV, WebM, AVI, MKV)',
+          description: 'Please select a valid video or audio file',
           variant: 'destructive'
         })
         return
@@ -35,7 +35,7 @@ export function ImportManager() {
 
       setIsImporting(true)
       try {
-        // Get video metadata
+        // Get media metadata (video or audio)
         const metadata = await window.api.getVideoMetadata(filePath)
 
         // Create video clip object
@@ -54,7 +54,7 @@ export function ImportManager() {
         addClip(clip)
 
         toast({
-          title: 'Video Imported',
+          title: 'Imported',
           description: `Successfully imported ${clip.name}`,
           variant: 'default'
         })
@@ -94,7 +94,7 @@ export function ImportManager() {
       setIsDragOver(false)
 
       const files = Array.from(e.dataTransfer.files)
-      const videoFile = files.find((f) => isValidVideoFile(f.name))
+      const videoFile = files.find((f) => isValidMediaFile(f.name))
 
       if (videoFile) {
         // In Electron, we need to get the file path from the file object
@@ -103,7 +103,7 @@ export function ImportManager() {
       } else {
         toast({
           title: 'Invalid File',
-          description: 'Please drop a valid video file',
+          description: 'Please drop a valid video or audio file',
           variant: 'destructive'
         })
       }

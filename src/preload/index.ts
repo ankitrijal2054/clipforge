@@ -46,7 +46,7 @@ const api = {
     return () => ipcRenderer.removeListener('video:convertProgress', handler)
   },
 
-  // File dialog operations
+  // File dialog operations (video or audio)
   selectVideoFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectVideo'),
 
   selectExportPath: (defaultFilename: string): Promise<string | null> =>
@@ -122,6 +122,23 @@ const api = {
     const handler = (_event: any, data: { filePath: string }) => callback(data)
     ipcRenderer.on('recording:dataSaved', handler)
     return () => ipcRenderer.removeListener('recording:dataSaved', handler)
+  },
+
+  // Timeline export operations (Phase 2D)
+  timelineExport: (params: any): Promise<string> => ipcRenderer.invoke('timeline:export', params),
+
+  // Timeline export progress listener
+  onTimelineExportProgress: (callback: (data: any) => void): (() => void) => {
+    const handler = (_event: any, data: any) => callback(data)
+    ipcRenderer.on('timeline:export-progress', handler)
+    return () => ipcRenderer.removeListener('timeline:export-progress', handler)
+  },
+
+  // Timeline export error listener
+  onTimelineExportError: (callback: (data: any) => void): (() => void) => {
+    const handler = (_event: any, data: any) => callback(data)
+    ipcRenderer.on('timeline:export-error', handler)
+    return () => ipcRenderer.removeListener('timeline:export-error', handler)
   }
 }
 

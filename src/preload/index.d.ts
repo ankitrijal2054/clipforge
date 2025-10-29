@@ -70,6 +70,11 @@ declare global {
         callback: (data: { filePath: string; duration: number }) => void
       ) => () => void
       onRecordingDataSaved: (callback: (data: { filePath: string }) => void) => () => void
+
+      // Timeline export (Phase 2D)
+      timelineExport: (params: any) => Promise<string>
+      onTimelineExportProgress: (callback: (data: any) => void) => () => void
+      onTimelineExportError: (callback: (data: any) => void) => () => void
     }
   }
 }

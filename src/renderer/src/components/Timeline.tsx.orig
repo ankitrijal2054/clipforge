@@ -4,7 +4,6 @@ import {
   useMultiClipTimelineActions,
   useTimelineTrackMute
 } from '../../../stores/editorStore'
-import { useEditorStore } from '../../../stores/editorStore'
 import TimelineClip from './TimelineClip'
 import TrackHeader from './TrackHeader'
 import { ZoomIn, ZoomOut } from 'lucide-react'
@@ -62,15 +61,12 @@ const generateTimeMarkers = (duration: number, interval: number): number[] => {
  */
 export const Timeline: React.FC = () => {
   const { timelineVideoClips, timelineAudioClips, selectedClipId } = useTimelineClips()
-  const { selectTimelineClip, toggleTrackMute, addClipToTrack, splitClip, removeClipFromTrack } =
-    useMultiClipTimelineActions()
+  const { selectTimelineClip, toggleTrackMute, addClipToTrack, splitClip, removeClipFromTrack } = useMultiClipTimelineActions()
   const isMuted = useTimelineTrackMute()
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const playheadRef = useRef<HTMLDivElement>(null)
-  // Use shared playback time from store (kept in sync with video)
-  const timelineCurrentTime = useEditorStore((state) => state.timelineCurrentTime)
-  const setTimelineCurrentTime = useEditorStore((state) => state.setTimelineCurrentTime)
+  const [playheadTime, setPlayheadTime] = useState(0)
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false)
   const [dragOverTrack, setDragOverTrack] = useState<'video' | 'audio' | null>(null)
   const [zoomLevel, setZoomLevel] = useState(1) // 100% = 1x
@@ -96,17 +92,17 @@ export const Timeline: React.FC = () => {
   const timeMarkers = generateTimeMarkers(totalDuration, timeMarkerInterval)
 
   // Handle playhead click to seek
-  const handlePlayheadAreaClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+  const handlePlayheadAreaClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!scrollContainerRef.current) return
     const rect = scrollContainerRef.current.getBoundingClientRect()
     const clickX = e.clientX - rect.left + scrollContainerRef.current.scrollLeft
     const timeX = clickX - TRACK_HEADER_WIDTH // Account for header spacer
     const time = Math.max(0, timeX / pixelsPerSecond)
-    setTimelineCurrentTime(Math.max(0, Math.min(time, totalDuration)))
+    setPlayheadTime(Math.max(0, Math.min(time, totalDuration)))
   }
 
   // Handle playhead drag start
-  const handlePlayheadMouseDown = (e: React.MouseEvent<HTMLDivElement>): void => {
+  const handlePlayheadMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDraggingPlayhead(true)
@@ -116,7 +112,7 @@ export const Timeline: React.FC = () => {
   useEffect(() => {
     if (!isDraggingPlayhead) return
 
-    const handleMouseMove = (e: MouseEvent): void => {
+    const handleMouseMove = (e: MouseEvent) => {
       if (!scrollContainerRef.current) return
       const rect = scrollContainerRef.current.getBoundingClientRect()
       const clientX = e.clientX
@@ -133,10 +129,10 @@ export const Timeline: React.FC = () => {
 
       const timeX = clickX - TRACK_HEADER_WIDTH
       const time = Math.max(0, timeX / pixelsPerSecond)
-      setTimelineCurrentTime(Math.max(0, Math.min(time, totalDuration)))
+      setPlayheadTime(Math.max(0, Math.min(time, totalDuration)))
     }
 
-    const handleMouseUp = (): void => {
+    const handleMouseUp = () => {
       setIsDraggingPlayhead(false)
     }
 
@@ -147,20 +143,20 @@ export const Timeline: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [isDraggingPlayhead, pixelsPerSecond, totalDuration, setTimelineCurrentTime])
+  }, [isDraggingPlayhead, pixelsPerSecond, totalDuration])
 
   // Handle zoom in
-  const handleZoomIn = (): void => {
+  const handleZoomIn = () => {
     setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, ZOOM_MAX))
   }
 
   // Handle zoom out
-  const handleZoomOut = (): void => {
+  const handleZoomOut = () => {
     setZoomLevel((prev) => Math.max(prev - ZOOM_STEP, ZOOM_MIN))
   }
 
   // Handle mouse wheel zoom (Ctrl + Scroll)
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>): void => {
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (!e.ctrlKey && !e.metaKey) return
     e.preventDefault()
 
@@ -169,20 +165,17 @@ export const Timeline: React.FC = () => {
   }
 
   // Handle drag over timeline
-  const handleDragOver = (
-    e: React.DragEvent<HTMLDivElement>,
-    trackType: 'video' | 'audio'
-  ): void => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, trackType: 'video' | 'audio') => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'copy'
     setDragOverTrack(trackType)
   }
 
-  const handleDragLeave = (): void => {
+  const handleDragLeave = () => {
     setDragOverTrack(null)
   }
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, trackType: 'video' | 'audio'): void => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, trackType: 'video' | 'audio') => {
     e.preventDefault()
     setDragOverTrack(null)
 
@@ -205,33 +198,27 @@ export const Timeline: React.FC = () => {
     }
   }
 
-  // Handle keyboard shortcuts with comprehensive debugging
+  // Handle keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 's' || e.key === 'S') {
         if (selectedClipId) {
           e.preventDefault()
-          splitClip(selectedClipId, timelineCurrentTime)
-        } else {
-          console.log('⚠️ No clip selected, cannot split')
+          splitClip(selectedClipId, playheadTime)
         }
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      } else if (e.key === 'Delete') {
         if (selectedClipId) {
           e.preventDefault()
-          const isInVideoTrack = timelineVideoClips.some((c) => c.id === selectedClipId)
-          const trackType = isInVideoTrack ? 'video' : 'audio'
-          removeClipFromTrack(trackType, selectedClipId)
-        } else {
-          console.log('⚠️ No clip selected, cannot delete')
+          removeClipFromTrack(selectedClipId)
         }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedClipId, timelineCurrentTime, timelineVideoClips, splitClip, removeClipFromTrack])
+  }, [selectedClipId, playheadTime])
 
-  const playheadPixelPosition = TRACK_HEADER_WIDTH + timelineCurrentTime * pixelsPerSecond
+  const playheadPixelPosition = TRACK_HEADER_WIDTH + playheadTime * pixelsPerSecond
 
   return (
     <div className="timeline-container">
@@ -258,8 +245,8 @@ export const Timeline: React.FC = () => {
         </div>
         <div className="timeline-info">
           <span className="info-label">
-            Playhead: {formatTime(timelineCurrentTime)} | Tip: Ctrl+Scroll to zoom • Drag clips to
-            timeline • S to split, Delete to remove
+            Playhead: {formatTime(playheadTime)} | Tip: Ctrl+Scroll to zoom • Drag clips to timeline
+            • S to split, Delete to remove
           </span>
         </div>
       </div>
@@ -303,7 +290,7 @@ export const Timeline: React.FC = () => {
           onMouseDown={handlePlayheadMouseDown}
         >
           <div className="playhead-line" />
-          <div className="playhead-time">{formatTime(timelineCurrentTime)}</div>
+          <div className="playhead-time">{formatTime(playheadTime)}</div>
         </div>
 
         {/* Tracks Container */}
@@ -332,7 +319,6 @@ export const Timeline: React.FC = () => {
                     isSelected={selectedClipId === clip.id}
                     onSelect={() => selectTimelineClip(clip.id)}
                     pixelsPerSecond={pixelsPerSecond}
-                    trackType="video"
                   />
                 ))}
               </div>
@@ -360,7 +346,6 @@ export const Timeline: React.FC = () => {
                     isSelected={selectedClipId === clip.id}
                     onSelect={() => selectTimelineClip(clip.id)}
                     pixelsPerSecond={pixelsPerSecond}
-                    trackType="audio"
                   />
                 ))}
               </div>

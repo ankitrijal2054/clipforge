@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { FileVideo, Play, Trash2 } from 'lucide-react'
+import { FileVideo, Play, Trash2, Music } from 'lucide-react'
 import { useEditorStore } from '../../../stores/editorStore'
 import { formatDuration, formatFileSize, formatResolution } from '../../../utils/formatters'
 import { useToast } from '../../../hooks/use-toast'
@@ -67,6 +67,12 @@ export function MediaLibrary() {
                 : 'bg-gray-800 hover:bg-gray-700 border border-transparent hover:border-gray-600'
             }`}
             onClick={() => handleSelectClip(clip.id)}
+            onDragStart={(e) => {
+              // Set drag data for timeline drop zones
+              e.dataTransfer.effectAllowed = 'copy'
+              e.dataTransfer.setData('application/json', JSON.stringify(clip))
+            }}
+            draggable
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             initial={{ opacity: 0, y: 20 }}
@@ -83,12 +89,18 @@ export function MediaLibrary() {
               <div className="flex-1 min-w-0">
                 <h4 className="text-xs font-medium text-white truncate">{clip.name}</h4>
 
-                <div className="flex flex-wrap gap-2 text-xs text-gray-400">
+                <div className="flex flex-wrap gap-2 text-xs text-gray-400 items-center">
                   <span className="flex items-center gap-0.5">
                     <Play className="w-2.5 h-2.5" />
                     {formatDuration(clip.duration)}
                   </span>
-                  <span>{formatResolution(clip.width, clip.height)}</span>
+                  {clip.width > 0 && clip.height > 0 ? (
+                    <span>{formatResolution(clip.width, clip.height)}</span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <Music className="w-3 h-3" /> Audio
+                    </span>
+                  )}
                   <span>{formatFileSize(clip.fileSize)}</span>
                 </div>
               </div>

@@ -160,7 +160,7 @@
 - ✅ **Professional UI**: Dark theme with custom ClipForge branding
 - ✅ **Real-time Preview**: High-quality video playback with controls
 - ✅ **Precise Trimming**: Frame-accurate start/end point selection
-- ✅ **Export System**: Multiple formats with progress tracking
+- ✅ **Export System**: Multiple formats with progress tracking; multi-clip concat; external audio overlay with precise duration match; mute-aware exporting
 - ✅ **Responsive Design**: Adapts to all screen sizes
 - ✅ **Keyboard Shortcuts**: Efficient editing workflow
 - ✅ **Drag & Drop**: Easy video file import
@@ -252,18 +252,40 @@
 
 ### Phase 2C: Multi-Clip Playback (Tasks 77-106)
 
-- 🔄 **Playback Logic**: Sequential clip playback with transitions
-- 🔄 **Audio Mixing**: Web Audio API integration for track mixing
-- 🔄 **Playhead Management**: Global playhead with scrubbing
-- 🔄 **Performance**: Optimization for smooth 30fps+ playback
-- 🔄 **Testing**: Multi-clip playback with various configurations
+- [x] **Task 66**: Create useTimelinePlayback hook - COMPLETE
+- [x] **Task 67**: Implement sequential playback - COMPLETE
+- [x] **Task 68**: Implement playhead sync - COMPLETE
+- [x] **Task 69**: Add seek functionality - COMPLETE
+- [x] **Task 70**: Implement play/pause/stop - COMPLETE
+- [x] **Task 71**: Implement single video element - COMPLETE
+- [x] **Task 72**: Create clip sequencing logic - COMPLETE
+- [x] **Task 73**: Implement clip switching - COMPLETE
+- [x] **Task 74**: Add audio overlay - COMPLETE
+- [x] **Task 75**: Implement trim playback - COMPLETE
+- [x] **Task 76**: Create audio track playback - COMPLETE
+- [x] **Task 77**: Implement mute logic - COMPLETE
+- [x] **Task 78**: Handle audio synchronization - COMPLETE
+- [x] **Task 79**: Update PreviewPlayer - COMPLETE
+- [x] **Task 80**: Implement play controls - COMPLETE
+- [x] **Task 81**: Test basic playback - READY FOR TESTING
+- [x] **Task 82**: Test seeking - READY FOR TESTING
+- [x] **Task 83**: Test trim playback - READY FOR TESTING
+- [x] **Task 84**: Test split clips - READY FOR TESTING
+- [x] **Task 85**: Test mute logic - READY FOR TESTING
+- [x] **Task 86**: Test audio sync - READY FOR TESTING
+- [x] **Task 87**: Test playback across clips - READY FOR TESTING
+- [x] **Task 88**: Test edge cases - READY FOR TESTING
 
 ### Phase 2D: Export Pipeline (Tasks 107-132)
 
-- 🔄 **FFmpeg Integration**: Multi-clip concatenation with trimming
-- 🔄 **Export UI**: Updated modal for multi-clip exports
-- 🔄 **File Management**: Temp file cleanup and export validation
-- 🔄 **Testing**: Multi-clip export across all formats and platforms
+- [x] **FFmpeg Integration**: Multi-clip concatenation with trimming (concat demuxer)
+- [x] **External Audio Overlay**: WAV extraction/concat; explicit stream mapping; silence padding with `apad`; trim with `atrim`
+- [x] **Mute Handling**: Respect video/audio track mute (strip audio with `-an` when needed)
+- [x] **Accurate Duration**: FFprobe-based duration used for exact A/V alignment
+- [x] **Export UI**: Updated modal for timeline exports; progress and error events wired
+- [x] **UX Polish**: Disable controls during export; enable export for timeline-only; reset save location on open
+- [x] **File Management**: Temp directory per export; full cleanup
+- [x] **Testing**: Verified multi-clip export with muted video + external audio (no truncation)
 
 ### Phase 2E: Polish & Testing (Tasks 133-167)
 
