@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { useEditorStore } from '../../../stores/editorStore'
 import { TimelineClip } from '../../../types/timeline'
 
@@ -79,12 +79,17 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
   const pendingVideoSrcRef = useRef<string | null>(null)
   const pendingAudioSrcRef = useRef<string | null>(null)
 
-  // Get state from store
-  const { timelineVideoClips, timelineAudioClips, isMuted, clips: libraryClips } = useEditorStore()
-
-  // Local playback state
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
+  // Get state from store (including shared timeline playback state)
+  const {
+    timelineVideoClips,
+    timelineAudioClips,
+    isMuted,
+    clips: libraryClips,
+    timelineCurrentTime,
+    timelineIsPlaying,
+    setTimelineCurrentTime,
+    setTimelinePlaying
+  } = useEditorStore()
 
   // Calculate total timeline duration
   const totalDuration = getTimelineDuration(timelineVideoClips, timelineAudioClips)
@@ -117,13 +122,13 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
     if (totalDuration === 0) return // No clips on timeline
 
     // Find active video clip
-    const activeVideoClip = getActiveClip(timelineVideoClips, currentTime)
+    const activeVideoClip = getActiveClip(timelineVideoClips, timelineCurrentTime)
 
     // Update video element
     if (videoRef.current) {
       if (activeVideoClip) {
         const clipPath = getClipPath(activeVideoClip.libraryId)
-        const playbackTime = calculateClipPlaybackTime(currentTime, activeVideoClip)
+        const playbackTime = calculateClipPlaybackTime(timelineCurrentTime, activeVideoClip)
 
         // Load clip if not already loaded
         // CRITICAL: Compare against pendingVideoSrcRef, NOT videoRef.current.src
@@ -140,11 +145,11 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
           videoRef.current.currentTime = playbackTime
         }
 
-        // Apply mute state
+        // Apply mute state (visuals should continue even if muted)
         videoRef.current.muted = isMuted.video
 
-        // Play or pause based on isPlaying state
-        if (isPlaying && !isMuted.video) {
+        // Play or pause based on isPlaying state (do not pause when muted)
+        if (timelineIsPlaying) {
           videoRef.current
             .play()
             .catch((e) => console.log('Video play error (expected in pause):', e))
@@ -160,13 +165,13 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
     }
 
     // Find active audio clip
-    const activeAudioClip = getActiveClip(timelineAudioClips, currentTime)
+    const activeAudioClip = getActiveClip(timelineAudioClips, timelineCurrentTime)
 
     // Update audio element
     if (audioRef.current) {
       if (activeAudioClip && !isMuted.audio) {
         const clipPath = getClipPath(activeAudioClip.libraryId)
-        const playbackTime = calculateClipPlaybackTime(currentTime, activeAudioClip)
+        const playbackTime = calculateClipPlaybackTime(timelineCurrentTime, activeAudioClip)
 
         // Load clip if not already loaded
         // CRITICAL: Compare against pendingAudioSrcRef, NOT audioRef.current.src
@@ -184,7 +189,7 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
         }
 
         // Play or pause
-        if (isPlaying) {
+        if (timelineIsPlaying) {
           audioRef.current
             .play()
             .catch((e) => console.log('Audio play error (expected in pause):', e))
@@ -197,10 +202,10 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
       }
     }
   }, [
-    currentTime,
+    timelineCurrentTime,
     timelineVideoClips,
     timelineAudioClips,
-    isPlaying,
+    timelineIsPlaying,
     isMuted,
     getClipPath,
     totalDuration
@@ -210,7 +215,7 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
    * Main playback loop: increment currentTime at 60fps
    */
   useEffect(() => {
-    if (!isPlaying || totalDuration === 0) {
+    if (!timelineIsPlaying || totalDuration === 0) {
       if (playbackIntervalRef.current) {
         clearInterval(playbackIntervalRef.current)
       }
@@ -218,17 +223,13 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
     }
 
     playbackIntervalRef.current = setInterval(() => {
-      setCurrentTime((prev) => {
-        const nextTime = prev + 0.016 // ~60fps (1000ms / 60fps ≈ 16.67ms)
-
-        // Stop playback when video track ends
-        if (nextTime >= totalDuration) {
-          setIsPlaying(false)
-          return 0
-        }
-
-        return nextTime
-      })
+      const nextTime = timelineCurrentTime + 0.016 // ~60fps
+      if (nextTime >= totalDuration) {
+        setTimelinePlaying(false)
+        setTimelineCurrentTime(0)
+      } else {
+        setTimelineCurrentTime(nextTime)
+      }
     }, 16)
 
     return () => {
@@ -236,31 +237,36 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
         clearInterval(playbackIntervalRef.current)
       }
     }
-  }, [isPlaying, totalDuration])
+  }, [
+    timelineIsPlaying,
+    totalDuration,
+    setTimelineCurrentTime,
+    setTimelinePlaying,
+    timelineCurrentTime
+  ])
 
   /**
    * Control functions
    */
   const play = useCallback(() => {
-    setIsPlaying(true)
-  }, [])
+    setTimelinePlaying(true)
+  }, [setTimelinePlaying])
 
   const pause = useCallback(() => {
-    setIsPlaying(false)
-  }, [])
+    setTimelinePlaying(false)
+  }, [setTimelinePlaying])
 
   const stop = useCallback(() => {
-    setCurrentTime(0)
-    setIsPlaying(false)
-  }, [])
+    setTimelineCurrentTime(0)
+    setTimelinePlaying(false)
+  }, [setTimelineCurrentTime, setTimelinePlaying])
 
   const seek = useCallback(
     (time: number) => {
-      // Clamp to valid range
       const clampedTime = Math.max(0, Math.min(time, totalDuration))
-      setCurrentTime(clampedTime)
+      setTimelineCurrentTime(clampedTime)
     },
-    [totalDuration]
+    [totalDuration, setTimelineCurrentTime]
   )
 
   return {
@@ -269,8 +275,8 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
     audioRef,
 
     // Playback state
-    isPlaying,
-    currentTime,
+    isPlaying: timelineIsPlaying,
+    currentTime: timelineCurrentTime,
     totalDuration,
 
     // Control functions
@@ -280,7 +286,7 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
     seek,
 
     // Helper getters
-    getActiveVideoClip: () => getActiveClip(timelineVideoClips, currentTime),
-    getActiveAudioClip: () => getActiveClip(timelineAudioClips, currentTime)
+    getActiveVideoClip: () => getActiveClip(timelineVideoClips, timelineCurrentTime),
+    getActiveAudioClip: () => getActiveClip(timelineAudioClips, timelineCurrentTime)
   }
 }

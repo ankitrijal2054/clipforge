@@ -61,6 +61,9 @@ export const useEditorStore = create<EditorStore>()(
         isPlaying: false,
         playbackRate: 1,
         volume: 1,
+        // Shared timeline playback state (Phase 2C)
+        timelineCurrentTime: 0,
+        timelineIsPlaying: false,
         trimStart: 0,
         trimEnd: 0,
         isDragging: false,
@@ -368,6 +371,13 @@ export const useEditorStore = create<EditorStore>()(
               [trackType]: !state.isMuted[trackType]
             }
           })),
+
+        // Shared timeline playback controls
+        setTimelineCurrentTime: (time: number) =>
+          set(() => ({
+            timelineCurrentTime: Math.max(0, time)
+          })),
+        setTimelinePlaying: (isPlaying: boolean) => set(() => ({ timelineIsPlaying: isPlaying })),
 
         // Trim actions
         resetTrim: () =>

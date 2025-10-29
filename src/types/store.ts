@@ -20,6 +20,10 @@ export interface EditorStore extends TimelineState {
   volume: number
   // isMuted is now part of TimelineState for track-specific muting
 
+  // Timeline playback (Phase 2C, shared across components)
+  timelineCurrentTime: number
+  timelineIsPlaying: boolean
+
   // Trim
   trimStart: number
   trimEnd: number
@@ -68,6 +72,10 @@ export interface EditorStore extends TimelineState {
   setVolume: (volume: number) => void
   toggleMute: () => void
   startExport: () => Promise<void>
+
+  // Timeline playback controls (shared)
+  setTimelineCurrentTime: (time: number) => void
+  setTimelinePlaying: (isPlaying: boolean) => void
 
   // UI
   setActiveModal: (modal: string | null) => void
