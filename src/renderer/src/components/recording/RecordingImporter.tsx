@@ -88,8 +88,9 @@ export const RecordingImporter: React.FC = () => {
       try {
         const result = await importRecording(video.path, true)
         if (result) {
-          // Remove from recorded videos list after successful import
-          setRecordedVideos((prev) => prev.filter((v) => v.path !== video.path))
+          // Recording imported successfully
+          // Note: We intentionally keep it in the recent list
+          // since it's still in the temp directory and user might want to import again
         }
       } finally {
         setImportingPath(null)
