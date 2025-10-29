@@ -61,7 +61,7 @@ export function MediaLibrary() {
         {clips.map((clip) => (
           <motion.div
             key={clip.id}
-            className={`rounded-lg cursor-pointer transition-all duration-200 overflow-hidden ${
+            className={`relative rounded-lg cursor-pointer transition-all duration-200 overflow-hidden ${
               selectedClip?.id === clip.id
                 ? 'ring-2 ring-blue-500 shadow-lg bg-blue-600/10'
                 : 'bg-gray-800 hover:bg-gray-700 border border-transparent hover:border-gray-600'
