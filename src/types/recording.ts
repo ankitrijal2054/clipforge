@@ -6,6 +6,7 @@ export interface RecordingOptions {
   type: RecordingType
   sourceId?: string // For screen recording
   audioDeviceId?: string // For audio input
+  webcamDeviceId?: string // For webcam input
   quality: 'high' | 'medium' | 'low'
   resolution?: {
     width: number

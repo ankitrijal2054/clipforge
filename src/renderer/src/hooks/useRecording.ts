@@ -1,5 +1,6 @@
-// Recording hook for React components - UPDATED for webcam support
+// Recording hook for React components - UPDATED with actual capture
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useScreenRecorder } from './useScreenRecorder'
 import type {
   ScreenSource,
   RecordingOptions,
@@ -44,8 +45,12 @@ export function useRecording(options: UseRecordingOptions = {}) {
     height: 180
   })
 
+  // Use the screen recorder hook for actual capture
+  const screenRecorder = useScreenRecorder()
+
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const unsubscribeRef = useRef<(() => void) | null>(null)
+  const startTimeRef = useRef<number | null>(null)
 
   // Load screen sources
   const loadScreenSources = useCallback(async () => {
@@ -55,18 +60,21 @@ export function useRecording(options: UseRecordingOptions = {}) {
       setError(null)
 
       // Auto-select first screen source
-      if (sources.length > 0 && !selectedSource) {
+      if (sources.length > 0) {
         const screenSource = sources.find((s: ScreenSource) => s.type === 'screen')
         if (screenSource) {
           setSelectedSource(screenSource.id)
+        } else if (sources.length > 0) {
+          // If no screen found, select first source
+          setSelectedSource(sources[0].id)
         }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load screen sources'
       setError(errorMessage)
-      options.onRecordingError?.(new Error(errorMessage))
+      console.error('Failed to load screen sources:', errorMessage)
     }
-  }, [selectedSource, options])
+  }, [])
 
   // Load webcam devices
   const loadWebcamDevices = useCallback(async () => {
@@ -81,13 +89,13 @@ export function useRecording(options: UseRecordingOptions = {}) {
       setWebcamDevices(videoInputs)
 
       // Auto-select first webcam if available
-      if (videoInputs.length > 0 && !selectedWebcam) {
+      if (videoInputs.length > 0) {
         setSelectedWebcam(videoInputs[0].deviceId)
       }
     } catch (err) {
       console.error('Failed to load webcam devices:', err)
     }
-  }, [selectedWebcam])
+  }, [])
 
   // Load audio devices
   const loadAudioDevices = useCallback(async () => {
@@ -117,40 +125,22 @@ export function useRecording(options: UseRecordingOptions = {}) {
     }
   }, [])
 
-  // Check and request permissions
-  const checkPermissions = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      })
+  // Initialize once on mount
+  useEffect(() => {
+    // Only run once - use ref to track if initialized
+    const initialized = { current: false }
 
-      // Stop all tracks immediately
-      stream.getTracks().forEach((track) => track.stop())
-
+    if (!initialized.current) {
+      initialized.current = true
+      loadScreenSources()
+      loadWebcamDevices()
+      loadAudioDevices()
+      loadQualitySettings()
+      // Set permissions to true by default - Electron will handle granting them
       setCameraPermission(true)
       setMicrophonePermission(true)
-    } catch (err) {
-      console.error('Permission check failed:', err)
-      setCameraPermission(false)
-      setMicrophonePermission(false)
     }
   }, [])
-
-  // Initialize
-  useEffect(() => {
-    loadScreenSources()
-    loadWebcamDevices()
-    loadAudioDevices()
-    loadQualitySettings()
-    checkPermissions()
-  }, [
-    loadScreenSources,
-    loadWebcamDevices,
-    loadAudioDevices,
-    loadQualitySettings,
-    checkPermissions
-  ])
 
   // Subscribe to recording state changes
   useEffect(() => {
@@ -207,7 +197,20 @@ export function useRecording(options: UseRecordingOptions = {}) {
     try {
       setError(null)
 
+      // Log current state for debugging
+      console.log('Starting recording with state:', {
+        recordingType,
+        selectedSource,
+        selectedWebcam,
+        cameraPermission,
+        screenSourcesCount: screenSources.length
+      })
+
       // Validate inputs based on recording type
+      if (!recordingType) {
+        throw new Error('Please select a recording mode (Screen, Webcam, or PiP)')
+      }
+
       if (recordingType === 'screen' && !selectedSource) {
         throw new Error('Please select a screen source')
       }
@@ -216,28 +219,41 @@ export function useRecording(options: UseRecordingOptions = {}) {
         throw new Error('Please select a webcam device')
       }
 
-      if (recordingType === 'webcam' && !cameraPermission) {
+      if ((recordingType === 'webcam' || recordingType === 'pip') && !cameraPermission) {
         throw new Error('Camera permission denied. Please enable camera access.')
       }
 
+      if (recordingType === 'pip' && !selectedSource) {
+        throw new Error('Please select a screen source for PiP')
+      }
+
+      if (recordingType === 'pip' && !selectedWebcam) {
+        throw new Error('Please select a webcam for PiP')
+      }
+
       const recordingOptions: RecordingOptions = {
-        type: recordingType || 'screen',
+        type: recordingType,
         quality,
-        sourceId: recordingType === 'screen' && selectedSource ? selectedSource : undefined,
-        audioDeviceId: selectedAudioDevice || undefined
+        sourceId:
+          (recordingType === 'screen' || recordingType === 'pip') && selectedSource
+            ? selectedSource
+            : undefined,
+        audioDeviceId: selectedAudioDevice || undefined,
+        webcamDeviceId: recordingType === 'webcam' && selectedWebcam ? selectedWebcam : undefined
       }
 
-      const result = await (window.api as any).startRecording(recordingOptions)
+      console.log('Recording options:', recordingOptions)
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to start recording')
-      }
+      // Use actual screen recorder to capture data
+      await screenRecorder.startScreenRecording(recordingOptions)
 
       setIsRecording(true)
       setRecordingDuration(0)
+      startTimeRef.current = Date.now()
       options.onRecordingStart?.(recordingOptions)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start recording'
+      console.error('Recording start error details:', err)
       setError(errorMessage)
       options.onRecordingError?.(new Error(errorMessage))
     }
@@ -248,63 +264,55 @@ export function useRecording(options: UseRecordingOptions = {}) {
     selectedWebcam,
     selectedAudioDevice,
     cameraPermission,
-    options
+    options,
+    screenRecorder,
+    screenSources
   ])
 
   // Stop recording
   const stopRecording = useCallback(async () => {
     try {
       setError(null)
-      const result = await (window.api as any).stopRecording()
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to stop recording')
-      }
+      await screenRecorder.stopScreenRecording()
 
       setIsRecording(false)
       setRecordingType(null)
+
+      // Calculate duration
+      const duration = startTimeRef.current ? Date.now() - startTimeRef.current : 0
+      options.onRecordingStopped?.({ filePath: '', duration })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to stop recording'
       setError(errorMessage)
       options.onRecordingError?.(new Error(errorMessage))
     }
-  }, [options])
+  }, [options, screenRecorder])
 
   // Pause recording
   const pauseRecording = useCallback(async () => {
     try {
       setError(null)
-      const result = await (window.api as any).pauseRecording()
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to pause recording')
-      }
-
+      screenRecorder.pauseScreenRecording()
       setIsPaused(true)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to pause recording'
       setError(errorMessage)
       options.onRecordingError?.(new Error(errorMessage))
     }
-  }, [options])
+  }, [options, screenRecorder])
 
   // Resume recording
   const resumeRecording = useCallback(async () => {
     try {
       setError(null)
-      const result = await (window.api as any).resumeRecording()
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to resume recording')
-      }
-
+      screenRecorder.resumeScreenRecording()
       setIsPaused(false)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to resume recording'
       setError(errorMessage)
       options.onRecordingError?.(new Error(errorMessage))
     }
-  }, [options])
+  }, [options, screenRecorder])
 
   // Clear error
   const clearError = useCallback(() => {
@@ -357,7 +365,6 @@ export function useRecording(options: UseRecordingOptions = {}) {
     loadScreenSources,
     loadWebcamDevices,
     loadAudioDevices,
-    checkPermissions,
     setPipPosition,
     setPipSize
   }
