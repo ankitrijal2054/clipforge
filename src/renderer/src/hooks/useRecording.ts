@@ -239,7 +239,10 @@ export function useRecording(options: UseRecordingOptions = {}) {
             ? selectedSource
             : undefined,
         audioDeviceId: selectedAudioDevice || undefined,
-        webcamDeviceId: recordingType === 'webcam' && selectedWebcam ? selectedWebcam : undefined
+        webcamDeviceId:
+          (recordingType === 'webcam' || recordingType === 'pip') && selectedWebcam
+            ? selectedWebcam
+            : undefined
       }
 
       console.log('Recording options:', recordingOptions)

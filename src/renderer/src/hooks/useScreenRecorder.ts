@@ -32,15 +32,13 @@ export function useScreenRecorder() {
       let stream: MediaStream | null = null
 
       try {
-        if (options.type === 'screen' || options.type === 'pip') {
+        if (options.type === 'screen') {
           // Screen recording using Electron's desktopCapturer
-          console.log('Screen recording: getting source with ID:', options.sourceId)
           if (!options.sourceId) {
-            throw new Error('Screen source ID is required for screen/PiP recording')
+            throw new Error('Screen source ID is required for screen recording')
           }
 
           try {
-            console.log('Attempting getUserMedia with chromeMediaSource...')
             stream = await navigator.mediaDevices.getUserMedia({
               audio: false,
               video: {
@@ -54,9 +52,7 @@ export function useScreenRecorder() {
                 }
               } as any
             })
-            console.log('Successfully got screen stream')
           } catch (error) {
-            console.warn('chromeMediaSource failed, trying getDisplayMedia...')
             // Fallback to getDisplayMedia
             try {
               stream = await navigator.mediaDevices.getDisplayMedia({
@@ -65,87 +61,160 @@ export function useScreenRecorder() {
                 },
                 audio: false
               } as any)
-              console.log('Successfully got screen stream via getDisplayMedia')
             } catch (fallbackError) {
               throw new Error(
                 `Failed to get screen: ${error instanceof Error ? error.message : 'Unknown error'}`
               )
             }
           }
+        } else if (options.type === 'pip') {
+          // Picture-in-Picture: get both screen and webcam streams
+          if (!options.sourceId) {
+            throw new Error('Screen source ID is required for PiP recording')
+          }
+          if (!options.webcamDeviceId) {
+            throw new Error('Webcam device ID is required for PiP recording')
+          }
+
+          // Get screen stream
+          let screenStream: MediaStream
+          try {
+            screenStream = await navigator.mediaDevices.getUserMedia({
+              audio: false,
+              video: {
+                mandatory: {
+                  chromeMediaSource: 'desktop' as any,
+                  chromeMediaSourceId: options.sourceId,
+                  minWidth: 1280,
+                  maxWidth: 1920,
+                  minHeight: 720,
+                  maxHeight: 1080
+                }
+              } as any
+            })
+          } catch (error) {
+            throw new Error(
+              `Failed to get screen for PiP: ${error instanceof Error ? error.message : 'Unknown error'}`
+            )
+          }
+
+          // Get webcam stream
+          let webcamStream: MediaStream
+          try {
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Webcam timeout')), 5000)
+            )
+
+            webcamStream = await Promise.race([
+              navigator.mediaDevices.getUserMedia({
+                video: {
+                  deviceId: { exact: options.webcamDeviceId }
+                } as any,
+                audio: true
+              }) as Promise<MediaStream>,
+              timeoutPromise as Promise<MediaStream>
+            ])
+          } catch (error) {
+            throw new Error(
+              `Failed to get webcam for PiP: ${error instanceof Error ? error.message : 'Unknown error'}`
+            )
+          }
+
+          // Create canvas for compositing
+          const canvas = document.createElement('canvas')
+          canvas.width = 1920
+          canvas.height = 1080
+
+          // Create video elements
+          const screenVideo = document.createElement('video')
+          screenVideo.autoplay = true
+          screenVideo.muted = true
+          screenVideo.playsInline = true
+          screenVideo.srcObject = screenStream
+
+          const webcamVideo = document.createElement('video')
+          webcamVideo.autoplay = true
+          webcamVideo.muted = true
+          webcamVideo.playsInline = true
+          webcamVideo.srcObject = webcamStream
+
+          // Start drawing frames
+          const ctx = canvas.getContext('2d')!
+          const drawFrame = () => {
+            if (screenVideo.readyState === screenVideo.HAVE_ENOUGH_DATA) {
+              ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height)
+            }
+
+            if (webcamVideo.readyState === webcamVideo.HAVE_ENOUGH_DATA) {
+              // Draw webcam in bottom-right corner (PiP)
+              const pipWidth = 320
+              const pipHeight = 180
+              const pipX = canvas.width - pipWidth - 20
+              const pipY = canvas.height - pipHeight - 20
+
+              ctx.save()
+              ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+              ctx.shadowBlur = 10
+              ctx.drawImage(webcamVideo, pipX, pipY, pipWidth, pipHeight)
+              ctx.restore()
+            }
+
+            requestAnimationFrame(drawFrame)
+          }
+          drawFrame()
+
+          // Get canvas stream and combine with audio
+          const canvasStream = canvas.captureStream(30)
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+
+          // Mix audio from screen and webcam
+          const screenAudioTrack = screenStream.getAudioTracks()[0]
+          const webcamAudioTrack = webcamStream.getAudioTracks()[0]
+
+          if (screenAudioTrack || webcamAudioTrack) {
+            const destination = audioContext.createMediaStreamDestination()
+
+            if (screenAudioTrack) {
+              const source = audioContext.createMediaStreamSource(screenStream)
+              source.connect(destination)
+            }
+
+            if (webcamAudioTrack) {
+              const source = audioContext.createMediaStreamSource(webcamStream)
+              source.connect(destination)
+            }
+
+            const audioTrack = destination.stream.getAudioTracks()[0]
+            if (audioTrack) {
+              canvasStream.addTrack(audioTrack)
+            }
+          }
+
+          stream = canvasStream
         } else if (options.type === 'webcam') {
           // Webcam recording
-          console.log('Webcam recording: device ID:', options.webcamDeviceId)
           if (!options.webcamDeviceId) {
             throw new Error('Webcam device ID is required for webcam recording')
           }
 
           try {
-            console.log(
-              'Requesting webcam with deviceId:',
-              options.webcamDeviceId.substring(0, 10) + '...'
-            )
-
-            // Create a timeout promise
             const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(
-                () =>
-                  reject(
-                    new Error(
-                      'getUserMedia timeout - camera may not be available or permissions denied at OS level'
-                    )
-                  ),
-                5000
-              )
+              setTimeout(() => reject(new Error('Webcam timeout')), 5000)
             )
 
-            // Race between getUserMedia and timeout
             stream = await Promise.race([
               navigator.mediaDevices.getUserMedia({
                 video: {
                   deviceId: { exact: options.webcamDeviceId }
                 } as any,
-                audio: true // Include audio from webcam
+                audio: true
               }) as Promise<MediaStream>,
               timeoutPromise as Promise<MediaStream>
             ])
-
-            console.log('Successfully got webcam stream with audio')
           } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : String(error)
-            console.error('Failed to get webcam - Full error:', error)
-            console.error('Error message:', errorMsg)
-            console.error('Device ID used:', options.webcamDeviceId)
-
-            // Try without audio if that failed
-            try {
-              console.log('Retrying without audio...')
-
-              const timeoutPromise2 = new Promise((_, reject) =>
-                setTimeout(
-                  () =>
-                    reject(
-                      new Error('getUserMedia timeout (video-only) - camera may not be available')
-                    ),
-                  5000
-                )
-              )
-
-              stream = await Promise.race([
-                navigator.mediaDevices.getUserMedia({
-                  video: {
-                    deviceId: { exact: options.webcamDeviceId }
-                  } as any,
-                  audio: false
-                }) as Promise<MediaStream>,
-                timeoutPromise2 as Promise<MediaStream>
-              ])
-
-              console.log('Successfully got webcam stream (video only)')
-            } catch (retryError) {
-              const retryMsg = retryError instanceof Error ? retryError.message : String(retryError)
-              console.error('Retry also failed:', retryError)
-              throw new Error(`Failed to get webcam: ${retryMsg}`)
-            }
+            throw new Error(
+              `Failed to get webcam: ${error instanceof Error ? error.message : 'Unknown error'}`
+            )
           }
         }
 
