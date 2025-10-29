@@ -14,6 +14,7 @@ import {
 import { useEditorStore } from '../../../stores/editorStore'
 import { useVideoPlayer } from '../../../hooks/useVideoPlayer'
 import { useKeyboardShortcuts } from '../../../hooks/useKeyboardShortcuts'
+import { useTimelinePlayback } from '../hooks/useTimelinePlayback'
 import { formatDuration, formatResolution, formatFileSize } from '../../../utils/formatters'
 import { Button } from '../../../components/ui/button'
 import { Slider } from '../../../components/ui/slider'
@@ -22,23 +23,21 @@ import { Slider } from '../../../components/ui/slider'
  * Helper function to create proper file URL for video loading
  */
 function getVideoSrc(filePath: string): string {
-  // Prefer custom protocol to avoid dev-server cross-origin restrictions
   const normalizedPath = filePath.replace(/\\/g, '/')
-  // Ensure no accidental multiple leading slashes
   const pathNoLeadingScheme = normalizedPath.replace(/^\/+/, '/')
   return `clipforge://${encodeURI(pathNoLeadingScheme)}`
 }
 
 /**
- * PreviewPlayer component for video playback and controls
+ * PreviewPlayer component supporting both single-clip and multi-clip playback
  *
  * Features:
+ * - Single-clip mode: Traditional trim workflow (when timeline is empty)
+ * - Multi-clip mode: Sequential timeline playback (when timeline has clips)
+ * - Automatic mode switching based on timeline state
+ * - Audio track support in multi-clip mode
+ * - Mute state for both video and audio tracks
  * - HTML5 video player with custom controls
- * - Play/pause, seek, volume, skip controls
- * - Fullscreen support
- * - Keyboard shortcuts integration
- * - Trim point visualization
- * - Professional UI with smooth animations
  */
 export function PreviewPlayer() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -46,33 +45,51 @@ export function PreviewPlayer() {
   const [showControls, setShowControls] = useState(true)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Get state and actions from store
+  // Get state from store
   const {
     selectedClip,
-    isPlaying,
+    isPlaying: singleClipIsPlaying,
     playhead,
     duration,
     volume,
     isMuted,
     trimStart,
     trimEnd,
-    togglePlayback,
+    togglePlayback: toggleSingleClipPlayback,
     setVolume,
     toggleMute,
     setPlayhead,
-    resetTrim
+    resetTrim,
+    timelineVideoClips,
+    timelineAudioClips
   } = useEditorStore()
 
-  // Use video player hook (provides the videoRef wired with playback logic)
-  const { videoRef, seekTo, skip } = useVideoPlayer()
+  // Single-clip playback (for MVP mode)
+  const { videoRef: singleClipVideoRef, seekTo, skip } = useVideoPlayer()
+
+  // Multi-clip timeline playback
+  const timelinePlayback = useTimelinePlayback()
+
+  // Determine which mode we're in
+  const hasTimelineClips = timelineVideoClips.length > 0 || timelineAudioClips.length > 0
+  const isTimelineMode = hasTimelineClips
+
+  // Select appropriate video ref and state based on mode
+  const displayIsPlaying = isTimelineMode ? timelinePlayback.isPlaying : singleClipIsPlaying
+  const displayCurrentTime = isTimelineMode ? timelinePlayback.currentTime : playhead
+  const displayDuration = isTimelineMode ? timelinePlayback.totalDuration : duration
 
   // Use keyboard shortcuts
   useKeyboardShortcuts()
 
-  // Handle seek slider change
+  // Handle seek slider change (works for both modes)
   const handleSeek = (value: number[]) => {
     const time = value[0]
-    seekTo(time)
+    if (isTimelineMode) {
+      timelinePlayback.seek(time)
+    } else {
+      seekTo(time)
+    }
   }
 
   // Handle volume slider change
@@ -80,9 +97,24 @@ export function PreviewPlayer() {
     setVolume(value[0])
   }
 
-  // Handle skip buttons
+  // Handle skip buttons (single-clip mode only)
   const handleSkip = (seconds: number) => {
-    skip(seconds)
+    if (!isTimelineMode) {
+      skip(seconds)
+    }
+  }
+
+  // Handle play/pause toggle
+  const handlePlayPause = () => {
+    if (isTimelineMode) {
+      if (timelinePlayback.isPlaying) {
+        timelinePlayback.pause()
+      } else {
+        timelinePlayback.play()
+      }
+    } else {
+      toggleSingleClipPlayback()
+    }
   }
 
   // Handle fullscreen toggle
@@ -128,7 +160,6 @@ export function PreviewPlayer() {
         controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000)
       }
 
-      // start initial hide timer
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
       controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000)
 
@@ -144,12 +175,13 @@ export function PreviewPlayer() {
     }
   }, [isFullscreen])
 
-  // Calculate trim region percentage for visualization
+  // Calculate trim region percentage (single-clip mode only)
   const trimStartPercent = duration > 0 ? (trimStart / duration) * 100 : 0
   const trimEndPercent = duration > 0 ? (trimEnd / duration) * 100 : 0
-  const playheadPercent = duration > 0 ? (playhead / duration) * 100 : 0
+  const playheadPercent = displayDuration > 0 ? (displayCurrentTime / displayDuration) * 100 : 0
 
-  if (!selectedClip) {
+  // Determine what to display
+  if (!selectedClip && !isTimelineMode) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-900 rounded-xl border border-gray-700">
         <div className="text-center max-w-md">
@@ -186,38 +218,54 @@ export function PreviewPlayer() {
           }
         }}
       >
-        {/* Video Element */}
-        <video
-          ref={videoRef}
-          src={getVideoSrc(selectedClip.path)}
-          className={isFullscreen ? 'w-full h-full object-contain' : 'w-full h-full object-contain'}
-          onLoadedMetadata={() => {
-            if (videoRef.current) {
-              setPlayhead(0)
+        {/* Video Element - Visible only in single-clip mode */}
+        {!isTimelineMode && (
+          <video
+            ref={singleClipVideoRef}
+            src={selectedClip ? getVideoSrc(selectedClip.path) : ''}
+            className={
+              isFullscreen ? 'w-full h-full object-contain' : 'w-full h-full object-contain'
             }
-          }}
-          onError={(e) => {
-            console.error('Video loading error:', e)
-            console.error('Video path:', selectedClip.path)
-            console.error('Video src:', getVideoSrc(selectedClip.path))
-          }}
-          onClick={togglePlayback}
-        />
+            onLoadedMetadata={() => {
+              if (singleClipVideoRef.current) {
+                setPlayhead(0)
+              }
+            }}
+            onError={(e) => {
+              console.error('Video loading error:', e)
+            }}
+            onClick={handlePlayPause}
+          />
+        )}
 
-        {/* Trim Region Overlay */}
-        {duration > 0 && (
+        {/* Timeline Video Element - Visible in timeline mode */}
+        {isTimelineMode && (
+          <video
+            ref={timelinePlayback.videoRef}
+            className={
+              isFullscreen ? 'w-full h-full object-contain' : 'w-full h-full object-contain'
+            }
+            onError={(e) => {
+              console.error('Timeline video error:', e)
+            }}
+            onClick={handlePlayPause}
+          />
+        )}
+
+        {/* Hidden Audio Element for timeline mode */}
+        {isTimelineMode && <audio ref={timelinePlayback.audioRef} />}
+
+        {/* Trim Region Overlay (single-clip mode only) */}
+        {!isTimelineMode && duration > 0 && (
           <div className="absolute inset-0 pointer-events-none">
-            {/* Trim start indicator */}
             <div
               className="absolute top-0 bottom-0 w-1 bg-blue-500"
               style={{ left: `${trimStartPercent}%` }}
             />
-            {/* Trim end indicator */}
             <div
               className="absolute top-0 bottom-0 w-1 bg-blue-500"
               style={{ left: `${trimEndPercent}%` }}
             />
-            {/* Trim region highlight */}
             <div
               className="absolute top-0 bottom-0 bg-blue-500 bg-opacity-20"
               style={{
@@ -231,7 +279,7 @@ export function PreviewPlayer() {
         {/* Play/Pause Overlay */}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.button
-            onClick={togglePlayback}
+            onClick={handlePlayPause}
             className="p-4 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-all"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -239,7 +287,7 @@ export function PreviewPlayer() {
             animate={{ opacity: showControls ? 1 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
+            {displayIsPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
           </motion.button>
         </div>
 
@@ -256,8 +304,8 @@ export function PreviewPlayer() {
           {/* Progress Bar */}
           <div className="mb-4">
             <div className="relative">
-              {/* Trim region background */}
-              {duration > 0 && (
+              {/* Trim region background (single-clip mode) */}
+              {!isTimelineMode && duration > 0 && (
                 <div
                   className="absolute top-0 h-2 bg-blue-500 bg-opacity-30 rounded"
                   style={{
@@ -269,9 +317,9 @@ export function PreviewPlayer() {
 
               {/* Progress slider */}
               <Slider
-                value={[playhead]}
+                value={[displayCurrentTime]}
                 onValueChange={handleSeek}
-                max={duration}
+                max={displayDuration || 1}
                 step={0.1}
                 className="w-full"
               />
@@ -285,8 +333,12 @@ export function PreviewPlayer() {
 
             {/* Time display */}
             <div className="flex justify-between text-xs text-gray-300 mt-2">
-              <span className="font-medium">{formatDuration(playhead)}</span>
-              <span className="text-gray-400">{formatDuration(duration)}</span>
+              <span className="font-medium">{formatDuration(displayCurrentTime)}</span>
+              <span className="text-gray-400">
+                {isTimelineMode
+                  ? `Timeline ${formatDuration(displayDuration)}`
+                  : formatDuration(displayDuration)}
+              </span>
             </div>
           </div>
 
@@ -294,56 +346,70 @@ export function PreviewPlayer() {
           <div className="flex items-center justify-between">
             {/* Left Controls */}
             <div className="flex items-center space-x-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleSkip(-10)}
-                className="text-white hover:bg-white/20 h-8 w-8 p-0"
-                title="Skip back 10s (J)"
-              >
-                <SkipBack className="w-4 h-4" />
-              </Button>
+              {!isTimelineMode && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSkip(-10)}
+                    className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                    title="Skip back 10s (J)"
+                  >
+                    <SkipBack className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
 
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={togglePlayback}
+                onClick={handlePlayPause}
                 className="text-white hover:bg-white/20 h-8 w-8 p-0"
                 title="Play/Pause (Space)"
               >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                {displayIsPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </Button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleSkip(10)}
-                className="text-white hover:bg-white/20 h-8 w-8 p-0"
-                title="Skip forward 10s (L)"
-              >
-                <SkipForward className="w-4 h-4" />
-              </Button>
+              {!isTimelineMode && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSkip(10)}
+                    className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                    title="Skip forward 10s (L)"
+                  >
+                    <SkipForward className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Center - Video Info */}
             <div className="text-center flex-1 px-4">
-              <p className="text-sm text-white font-medium truncate">{selectedClip.name}</p>
-              <p className="text-xs text-gray-400">
-                Trim: {formatDuration(trimEnd - trimStart)} / {formatDuration(duration)}
+              <p className="text-sm text-white font-medium truncate">
+                {isTimelineMode ? 'Timeline Playback' : selectedClip?.name || 'No video'}
               </p>
+              {!isTimelineMode && (
+                <p className="text-xs text-gray-400">
+                  Trim: {formatDuration(trimEnd - trimStart)} / {formatDuration(duration)}
+                </p>
+              )}
             </div>
 
             {/* Right Controls */}
             <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetTrim}
-                className="text-white hover:bg-white/20 h-8 w-8 p-0"
-                title="Reset trim (R)"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </Button>
+              {!isTimelineMode && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetTrim}
+                  className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                  title="Reset trim (R)"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+              )}
 
               <Button
                 variant="ghost"
@@ -352,12 +418,16 @@ export function PreviewPlayer() {
                 className="text-white hover:bg-white/20 h-8 w-8 p-0"
                 title="Mute (M)"
               >
-                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                {isMuted.video && isMuted.audio ? (
+                  <VolumeX className="w-4 h-4" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
+                )}
               </Button>
 
               <div className="w-16">
                 <Slider
-                  value={[isMuted ? 0 : volume]}
+                  value={[isMuted.video && isMuted.audio ? 0 : volume]}
                   onValueChange={handleVolumeChange}
                   max={1}
                   step={0.1}
@@ -383,12 +453,17 @@ export function PreviewPlayer() {
       <div className="bg-gray-800 rounded-lg p-3 border border-gray-700 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-400">
-            {formatResolution(selectedClip.width, selectedClip.height)} •{' '}
-            {formatFileSize(selectedClip.fileSize)} • {formatDuration(selectedClip.duration)}
+            {isTimelineMode
+              ? `Timeline with ${timelineVideoClips.length} video clips + ${timelineAudioClips.length} audio clips`
+              : selectedClip
+                ? `${formatResolution(selectedClip.width, selectedClip.height)} • ${formatFileSize(selectedClip.fileSize)} • ${formatDuration(selectedClip.duration)}`
+                : 'No video loaded'}
           </div>
-          <div className="text-xs text-gray-500">
-            Trim: {formatDuration(trimStart)} - {formatDuration(trimEnd)}
-          </div>
+          {!isTimelineMode && selectedClip && (
+            <div className="text-xs text-gray-500">
+              Trim: {formatDuration(trimStart)} - {formatDuration(trimEnd)}
+            </div>
+          )}
         </div>
       </div>
     </div>
