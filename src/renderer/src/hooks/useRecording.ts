@@ -280,6 +280,7 @@ export function useRecording(options: UseRecordingOptions = {}) {
 
       setIsRecording(false)
       setRecordingType(null)
+      setRecordingDuration(0)
 
       // Calculate duration
       const duration = startTimeRef.current ? Date.now() - startTimeRef.current : 0
