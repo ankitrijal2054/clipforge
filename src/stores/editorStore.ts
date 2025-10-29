@@ -2,7 +2,37 @@ import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { EditorStore } from '../types/store'
 import { VideoClip, ExportSettings } from '../types/video'
+import { TimelineClip } from '../types/timeline'
 import { createPersistenceStorage } from './persistence'
+
+/**
+ * Helper function to generate random colors for clips
+ */
+const getRandomColor = (): string => {
+  const colors = [
+    '#FF6B6B',
+    '#4ECDC4',
+    '#45B7D1',
+    '#FFA07A',
+    '#98D8C8',
+    '#F38181',
+    '#AA96DA',
+    '#FCBAD3'
+  ]
+  return colors[Math.floor(Math.random() * colors.length)]
+}
+
+/**
+ * Helper function to recalculate positions for all clips in a track
+ */
+const recalculatePositions = (clips: TimelineClip[]): TimelineClip[] => {
+  let cumulativePosition = 0
+  return clips.map((clip) => ({
+    ...clip,
+    position: (cumulativePosition += clip.effectiveDuration) - clip.effectiveDuration,
+    effectiveDuration: clip.trimEnd - clip.trimStart
+  }))
+}
 
 /**
  * Zustand store for ClipForge editor state management
@@ -31,7 +61,6 @@ export const useEditorStore = create<EditorStore>()(
         isPlaying: false,
         playbackRate: 1,
         volume: 1,
-        isMuted: false,
         trimStart: 0,
         trimEnd: 0,
         isDragging: false,
@@ -44,6 +73,15 @@ export const useEditorStore = create<EditorStore>()(
         activeModal: null,
         sidebarCollapsed: false,
         theme: 'dark',
+
+        // Multi-clip timeline state (Phase 2B/2C)
+        timelineVideoClips: [],
+        timelineAudioClips: [],
+        selectedClipId: null,
+        isMuted: {
+          video: false,
+          audio: false
+        },
 
         // Media management actions
         addClip: (clip: VideoClip) =>
@@ -123,13 +161,212 @@ export const useEditorStore = create<EditorStore>()(
         setVolume: (volume: number) =>
           set({
             volume: Math.max(0, Math.min(1, volume)),
-            isMuted: volume === 0
+            isMuted: volume === 0 ? { video: true, audio: true } : { video: false, audio: false }
           }),
 
         toggleMute: () =>
           set((state) => ({
-            isMuted: !state.isMuted,
-            volume: state.isMuted ? state.volume : 0
+            isMuted: {
+              video: !state.isMuted.video,
+              audio: !state.isMuted.audio
+            },
+            volume: state.isMuted.video && state.isMuted.audio ? state.volume : 0
+          })),
+
+        // Multi-Clip Timeline Actions (Phase 2B/2C)
+        addClipToTrack: (trackType: 'video' | 'audio', libraryClip: VideoClip) =>
+          set((state) => {
+            const trackClips =
+              trackType === 'video' ? state.timelineVideoClips : state.timelineAudioClips
+
+            // Calculate position = sum of all effective durations in track
+            const position = trackClips.reduce((sum, clip) => sum + clip.effectiveDuration, 0)
+
+            // Create new timeline clip
+            const newTimelineClip: TimelineClip = {
+              id: `clip-${Date.now()}`,
+              libraryId: libraryClip.id,
+              name: libraryClip.name || 'Untitled',
+              trackType,
+              duration: libraryClip.duration,
+              trimStart: 0,
+              trimEnd: libraryClip.duration,
+              effectiveDuration: libraryClip.duration,
+              position,
+              color: getRandomColor()
+            }
+
+            const updatedClips =
+              trackType === 'video'
+                ? [...state.timelineVideoClips, newTimelineClip]
+                : [...state.timelineAudioClips, newTimelineClip]
+
+            return trackType === 'video'
+              ? { timelineVideoClips: updatedClips }
+              : { timelineAudioClips: updatedClips }
+          }),
+
+        removeClipFromTrack: (trackType: 'video' | 'audio', clipId: string) =>
+          set((state) => {
+            const trackClips =
+              trackType === 'video'
+                ? state.timelineVideoClips.filter((c) => c.id !== clipId)
+                : state.timelineAudioClips.filter((c) => c.id !== clipId)
+
+            // Recalculate positions for remaining clips
+            const updatedClips = recalculatePositions(trackClips)
+
+            // Clear selection if deleted clip was selected
+            const selectedClipId = state.selectedClipId === clipId ? null : state.selectedClipId
+
+            return trackType === 'video'
+              ? { timelineVideoClips: updatedClips, selectedClipId }
+              : { timelineAudioClips: updatedClips, selectedClipId }
+          }),
+
+        moveClip: (trackType: 'video' | 'audio', clipId: string, newPosition: number) =>
+          set((state) => {
+            const trackClips =
+              trackType === 'video' ? state.timelineVideoClips : state.timelineAudioClips
+
+            // Find clip being moved
+            const clipIndex = trackClips.findIndex((c) => c.id === clipId)
+            if (clipIndex === -1) return state
+
+            const clip = trackClips[clipIndex]
+
+            // For now, just reorder clips (simplified - no collision detection)
+            // Find target position in array
+            let targetIndex = 0
+            let cumulativePos = 0
+
+            for (let i = 0; i < trackClips.length; i++) {
+              if (i === clipIndex) continue
+              if (cumulativePos + trackClips[i].effectiveDuration <= newPosition) {
+                cumulativePos += trackClips[i].effectiveDuration
+                targetIndex = i + 1
+              }
+            }
+
+            // Remove from current position and insert at target
+            const updatedClips = [...trackClips]
+            updatedClips.splice(clipIndex, 1)
+            updatedClips.splice(targetIndex, 0, clip)
+
+            // Recalculate all positions
+            const repositionedClips = recalculatePositions(updatedClips)
+
+            return trackType === 'video'
+              ? { timelineVideoClips: repositionedClips }
+              : { timelineAudioClips: repositionedClips }
+          }),
+
+        updateClipTrim: (clipId: string, trimStart: number, trimEnd: number) =>
+          set((state) => {
+            // Validate trim points
+            const finalTrimStart = Math.max(0, Math.min(trimStart, trimEnd - 0.05))
+            const finalTrimEnd = Math.max(trimStart + 0.05, trimEnd)
+
+            // Update in video track or audio track
+            let updatedVideoClips = state.timelineVideoClips
+            let updatedAudioClips = state.timelineAudioClips
+
+            const videoClipIndex = state.timelineVideoClips.findIndex((c) => c.id === clipId)
+            if (videoClipIndex !== -1) {
+              updatedVideoClips = [...state.timelineVideoClips]
+              updatedVideoClips[videoClipIndex] = {
+                ...updatedVideoClips[videoClipIndex],
+                trimStart: finalTrimStart,
+                trimEnd: finalTrimEnd,
+                effectiveDuration: finalTrimEnd - finalTrimStart
+              }
+              updatedVideoClips = recalculatePositions(updatedVideoClips)
+            } else {
+              const audioClipIndex = state.timelineAudioClips.findIndex((c) => c.id === clipId)
+              if (audioClipIndex !== -1) {
+                updatedAudioClips = [...state.timelineAudioClips]
+                updatedAudioClips[audioClipIndex] = {
+                  ...updatedAudioClips[audioClipIndex],
+                  trimStart: finalTrimStart,
+                  trimEnd: finalTrimEnd,
+                  effectiveDuration: finalTrimEnd - finalTrimStart
+                }
+                updatedAudioClips = recalculatePositions(updatedAudioClips)
+              }
+            }
+
+            return {
+              timelineVideoClips: updatedVideoClips,
+              timelineAudioClips: updatedAudioClips
+            }
+          }),
+
+        splitClip: (clipId: string, splitTime: number) =>
+          set((state) => {
+            // Find which track contains this clip
+            const videoClipIndex = state.timelineVideoClips.findIndex((c) => c.id === clipId)
+            const isInVideoTrack = videoClipIndex !== -1
+
+            const clips = isInVideoTrack ? state.timelineVideoClips : state.timelineAudioClips
+            const clip =
+              clips[
+                videoClipIndex !== -1
+                  ? videoClipIndex
+                  : state.timelineAudioClips.findIndex((c) => c.id === clipId)
+              ]
+
+            if (!clip) return state
+
+            // Calculate split point relative to clip trim boundaries
+            const splitPointInClip = splitTime - clip.position + clip.trimStart
+
+            // Validate split is within clip bounds
+            if (splitPointInClip <= clip.trimStart || splitPointInClip >= clip.trimEnd) {
+              return state
+            }
+
+            // Create two clips from original
+            const clip1: TimelineClip = {
+              ...clip,
+              id: `clip-${Date.now()}`,
+              trimEnd: splitPointInClip,
+              effectiveDuration: splitPointInClip - clip.trimStart
+            }
+
+            const clip2: TimelineClip = {
+              ...clip,
+              id: `clip-${Date.now()}-split`,
+              trimStart: splitPointInClip,
+              effectiveDuration: clip.trimEnd - splitPointInClip
+            }
+
+            // Insert both clips at original position
+            const updatedClips = [...clips]
+            updatedClips.splice(
+              videoClipIndex !== -1
+                ? videoClipIndex
+                : state.timelineAudioClips.findIndex((c) => c.id === clipId),
+              1,
+              clip1,
+              clip2
+            )
+
+            // Recalculate positions
+            const repositionedClips = recalculatePositions(updatedClips)
+
+            return isInVideoTrack
+              ? { timelineVideoClips: repositionedClips }
+              : { timelineAudioClips: repositionedClips }
+          }),
+
+        selectTimelineClip: (clipId: string | null) => set({ selectedClipId: clipId }),
+
+        toggleTrackMute: (trackType: 'video' | 'audio') =>
+          set((state) => ({
+            isMuted: {
+              ...state.isMuted,
+              [trackType]: !state.isMuted[trackType]
+            }
           })),
 
         // Trim actions
@@ -360,4 +597,39 @@ export const useUIActions = () => {
   const toggleSidebar = useEditorStore((state) => state.toggleSidebar)
 
   return { setActiveModal, toggleSidebar }
+}
+
+// Multi-clip timeline selectors (Phase 2B/2C)
+export const useTimelineClips = () => {
+  const timelineVideoClips = useEditorStore((state) => state.timelineVideoClips)
+  const timelineAudioClips = useEditorStore((state) => state.timelineAudioClips)
+  const selectedClipId = useEditorStore((state) => state.selectedClipId)
+
+  return { timelineVideoClips, timelineAudioClips, selectedClipId }
+}
+
+export const useTimelineTrackMute = () => {
+  const isMuted = useEditorStore((state) => state.isMuted)
+
+  return isMuted
+}
+
+export const useMultiClipTimelineActions = () => {
+  const addClipToTrack = useEditorStore((state) => state.addClipToTrack)
+  const removeClipFromTrack = useEditorStore((state) => state.removeClipFromTrack)
+  const moveClip = useEditorStore((state) => state.moveClip)
+  const updateClipTrim = useEditorStore((state) => state.updateClipTrim)
+  const splitClip = useEditorStore((state) => state.splitClip)
+  const selectTimelineClip = useEditorStore((state) => state.selectTimelineClip)
+  const toggleTrackMute = useEditorStore((state) => state.toggleTrackMute)
+
+  return {
+    addClipToTrack,
+    removeClipFromTrack,
+    moveClip,
+    updateClipTrim,
+    splitClip,
+    selectTimelineClip,
+    toggleTrackMute
+  }
 }

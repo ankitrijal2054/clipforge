@@ -1,0 +1,263 @@
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 8px;
+  overflow: hidden;
+}
+
+/* Zoom Controls and Info */
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: #111827;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+}
+
+.zoom-button:hover:not(:disabled) {
+  background-color: #4b5563;
+  color: #d1d5db;
+}
+
+.zoom-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.zoom-level {
+  font-size: 12px;
+  font-weight: 600;
+  color: #d1d5db;
+  min-width: 50px;
+  text-align: center;
+}
+
+.timeline-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.info-label {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Timeline Header with Time Markers */
+.timeline-header-container {
+  display: flex;
+  height: 50px;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  background-color: #111827;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.timeline-header {
+  display: flex;
+  position: relative;
+  height: 100%;
+  background-color: #111827;
+}
+
+.time-marker {
+  position: absolute;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 4px;
+}
+
+.marker-line {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 8px;
+  background-color: #4b5563;
+}
+
+.time-label {
+  font-size: 10px;
+  color: #9ca3af;
+  white-space: nowrap;
+  margin-top: 10px;
+  margin-left: 2px;
+  font-weight: 500;
+}
+
+/* Scrollable Timeline Container */
+.timeline-scroll-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  position: relative;
+  background-color: #0f1419;
+  border: 1px solid #374151;
+  border-radius: 4px;
+}
+
+.track-section {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+.track {
+  flex: 1;
+  background-color: #111827;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  position: relative;
+  overflow: visible;
+  min-height: 100px;
+  cursor: grab;
+}
+
+.track.drag-over {
+  background-color: #1e3a8a;
+  border-color: #3b82f6;
+  box-shadow: inset 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
+.track.video-track {
+  border-left: 3px solid #3b82f6;
+}
+
+.track.audio-track {
+  border-left: 3px solid #f59e0b;
+}
+
+.clip-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+/* Playhead Wrapper - Fixed positioning over scrollable area */
+.playhead-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background-color: #ef4444;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.playhead:active {
+  cursor: grabbing;
+}
+
+.playhead-line {
+  width: 100%;
+  height: 100%;
+  background-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.playhead-time {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #1f2937;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #374151;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Custom Scrollbars */
+.timeline-header-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.timeline-header-container::-webkit-scrollbar-track {
+  background-color: #111827;
+}
+
+.timeline-header-container::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+  border-radius: 3px;
+}
+
+.timeline-header-container::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+.timeline-scroll-container::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-track {
+  background-color: #111827;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+  border-radius: 4px;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+.timeline-scroll-container::-webkit-scrollbar-corner {
+  background-color: #111827;
+}

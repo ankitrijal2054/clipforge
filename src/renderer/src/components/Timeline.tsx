@@ -1,501 +1,297 @@
-import React, { useRef, useCallback, useMemo, useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import React, { useRef, useEffect, useState } from 'react'
+import {
+  useTimelineClips,
+  useMultiClipTimelineActions,
+  useTimelineTrackMute
+} from '../../../stores/editorStore'
+import TimelineClip from './TimelineClip'
+import TrackHeader from './TrackHeader'
 import { ZoomIn, ZoomOut } from 'lucide-react'
-import { useTimeline } from '../../../stores/editorStore'
-import { useTimelineActions } from '../../../stores/editorStore'
-import { useTrimHandle } from '../../../stores/editorStore'
-import { useTrimActions } from '../../../stores/editorStore'
-import { formatDuration } from '../../../utils/formatters'
-import { Button } from '../../../components/ui/button'
-import { RotateCcw } from 'lucide-react'
-import { useEditorStore } from '../../../stores/editorStore'
+import './Timeline.css'
 
 /**
- * Timeline component for video editing
- *
- * Features:
- * - Responsive design that adapts to screen size
- * - Time markers and ruler
- * - Playhead indicator synchronized with video player
- * - Trim region visualization
- * - Click-to-seek functionality
- * - Zoom in/out controls
- * - Pan/scroll when zoomed
- * - Drag playhead to scrub
- * - All components fit within screen bounds
- *
- * Responsive Behavior:
- * - Maintains minimum height and width
- * - Scales with container size
- * - Hides labels on small screens
- * - Adjusts marker intervals dynamically
+ * Constants for timeline rendering
+ * At 100% zoom: 50 minutes = container width
+ * So: containerWidth (1400px) / 3000s (50 min) = 0.467 px per second at 100% zoom
  */
+const DEFAULT_PIXELS_PER_SECOND = 0.5 // At 100% zoom: 0.5 pixels per second (50 min fits in ~1400px)
+const ZOOM_MIN = 0.1 // 10% zoom
+const ZOOM_MAX = 10 // 1000% zoom
+const ZOOM_STEP = 0.1
+const TIME_MARKER_INTERVAL_BASE = 300 // 5 minutes at default zoom
 
-interface TimeMarker {
-  time: number
-  label: string
+/**
+ * Helper to format time as MM:SS
+ */
+const formatTime = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  const secs = Math.floor(seconds % 60)
+
+  if (hours > 0) {
+    return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-export function Timeline() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const trackRef = useRef<HTMLDivElement>(null)
-  const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false)
-  const [containerWidth, setContainerWidth] = useState(0)
+/**
+ * Calculate time marker interval based on zoom level
+ */
+const getTimeMarkerInterval = (zoomLevel: number): number => {
+  // At zoom 1x, every 5 minutes. Higher zoom = more frequent markers
+  if (zoomLevel <= 0.5) return 600 // 10 min
+  if (zoomLevel <= 1) return 300 // 5 min
+  if (zoomLevel <= 2) return 120 // 2 min
+  if (zoomLevel <= 5) return 60 // 1 min
+  return 30 // 30 sec at high zoom
+}
 
-  // Get state from store
-  const { playhead, duration, zoomLevel, timelineScrollOffset, trimStart, trimEnd } = useTimeline()
-  const { activeHandle } = useTrimHandle()
+/**
+ * Helper to generate time markers
+ */
+const generateTimeMarkers = (duration: number, interval: number): number[] => {
+  const markers: number[] = []
+  for (let time = 0; time <= duration; time += interval) {
+    markers.push(time)
+  }
+  return markers
+}
 
-  // Get actions from store
-  const { setPlayhead, setZoomLevel, setTimelineScrollOffset } = useTimelineActions()
-  const { updateTrimStart, updateTrimEnd, setActiveHandle, setIsDragging } = useTrimActions()
+/**
+ * Main Timeline Component with Zoom Support
+ */
+export const Timeline: React.FC = () => {
+  const { timelineVideoClips, timelineAudioClips, selectedClipId } = useTimelineClips()
+  const { selectTimelineClip, toggleTrackMute, addClipToTrack } = useMultiClipTimelineActions()
+  const isMuted = useTimelineTrackMute()
 
-  // Handle window resize for responsive design
-  useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth)
-      }
-    }
+  const timelineScrollRef = useRef<HTMLDivElement>(null)
+  const [playheadTime, setPlayheadTime] = useState(0)
+  const [dragOverTrack, setDragOverTrack] = useState<'video' | 'audio' | null>(null)
+  const [zoomLevel, setZoomLevel] = useState(1) // 100% = 1x
 
-    handleResize()
-    const resizeObserver = new ResizeObserver(handleResize)
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current)
-    }
-
-    return () => resizeObserver.disconnect()
-  }, [])
-
-  // Calculate base pixels per second (to fit entire video in container at 1x zoom)
-  const basePixelsPerSecond = useMemo(() => {
-    if (duration === 0 || containerWidth === 0) return 1
-    // Calculate pixels per second so entire video fits in container at zoom level 1
-    return containerWidth / duration
-  }, [duration, containerWidth])
-
-  // Apply zoom multiplier to base pixels per second
-  const pixelsPerSecond = useMemo(() => {
-    // Zoom level 1 = fit entire video in container
-    // Zoom level 2 = twice as large (half fits in container, needs scroll)
-    // Zoom level 0.5 = half as large (could fit 2 videos worth)
-    return Math.max(1, basePixelsPerSecond * zoomLevel)
-  }, [basePixelsPerSecond, zoomLevel])
-
-  // Calculate total timeline width including zoom
-  const totalTimelineWidth = useMemo(() => {
-    if (duration === 0) return containerWidth
-    return Math.max(containerWidth, duration * pixelsPerSecond)
-  }, [duration, pixelsPerSecond, containerWidth])
-
-  // UI constants and clamped pixel helpers to ensure endpoints remain visible
-  const HANDLE_WIDTH_PX = 2
-  const HANDLE_RIGHT_PADDING_PX = 8
-  const PLAYHEAD_WIDTH_PX = 1
-  const safeRightForHandlePx = Math.max(
-    0,
-    totalTimelineWidth - (HANDLE_WIDTH_PX + HANDLE_RIGHT_PADDING_PX)
-  )
-  const trimStartPx = trimStart * pixelsPerSecond
-  const trimEndPxRaw = trimEnd * pixelsPerSecond
-  const trimEndPxClamped = Math.min(trimEndPxRaw, safeRightForHandlePx)
-  const playheadPxRaw = playhead * pixelsPerSecond
-  const playheadPxClamped = Math.min(playheadPxRaw, totalTimelineWidth - (PLAYHEAD_WIDTH_PX + 1))
-
-  // Generate time markers based on duration and zoom level
-  const timeMarkers = useMemo((): TimeMarker[] => {
-    if (duration === 0) return []
-
-    const markers: TimeMarker[] = []
-    // Determine interval based on zoom level and duration
-    let interval: number
-
-    if (duration < 10) {
-      interval = 1 // 1 second
-    } else if (duration < 30) {
-      interval = 2 // 2 seconds
-    } else if (duration < 60) {
-      interval = 5 // 5 seconds
-    } else if (duration < 300) {
-      interval = 10 // 10 seconds
-    } else if (duration < 600) {
-      interval = 30 // 30 seconds
-    } else {
-      interval = 60 // 1 minute
-    }
-
-    // Adjust interval for zoom level
-    const pixelsPerMarker = interval * pixelsPerSecond
-    if (pixelsPerMarker < 60) {
-      // Markers too close, increase interval
-      interval = Math.ceil(interval * (60 / pixelsPerMarker))
-    }
-
-    // Generate markers
-    for (let i = 0; i <= duration; i += interval) {
-      markers.push({
-        time: i,
-        label: formatDuration(i)
-      })
-    }
-
-    return markers
-  }, [duration, pixelsPerSecond])
-
-  // Handle zoom in
-  const handleZoomIn = useCallback(() => {
-    const newZoom = Math.min(10, zoomLevel * 1.2)
-    setZoomLevel(newZoom)
-  }, [zoomLevel, setZoomLevel])
-
-  // Handle zoom out
-  const handleZoomOut = useCallback(() => {
-    const newZoom = Math.max(0.5, zoomLevel / 1.2)
-    setZoomLevel(newZoom)
-  }, [zoomLevel, setZoomLevel])
-
-  // Handle mouse wheel for zoom
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return
-      e.preventDefault()
-
-      const direction = e.deltaY > 0 ? -1 : 1 // Invert for natural zoom
-      const newZoom = Math.max(0.5, Math.min(10, zoomLevel * (1 + direction * 0.1)))
-      setZoomLevel(newZoom)
-    },
-    [zoomLevel, setZoomLevel]
-  )
-
-  // Handle click on timeline to seek
-  const handleTimelineClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!trackRef.current) return
-
-      const rect = trackRef.current.getBoundingClientRect()
-      const clickX = e.clientX - rect.left + timelineScrollOffset
-
-      const time = clickX / pixelsPerSecond
-      const clampedTime = Math.max(0, Math.min(time, duration))
-
-      setPlayhead(clampedTime)
-    },
-    [pixelsPerSecond, duration, timelineScrollOffset, setPlayhead]
-  )
-
-  // Handle trim handle mouse down
-  const handleTrimHandleMouseDown = useCallback(
-    (handle: 'start' | 'end') => (e: React.MouseEvent) => {
-      e.stopPropagation()
-      setActiveHandle(handle)
-      setIsDragging(true)
-    },
-    [setActiveHandle, setIsDragging]
-  )
-
-  // Handle trim handle drag movement
-  useEffect(() => {
-    if (!activeHandle || !trackRef.current) return
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = trackRef.current!.getBoundingClientRect()
-      const mouseX = e.clientX - rect.left + timelineScrollOffset
-
-      const time = mouseX / pixelsPerSecond
-      const clampedTime = Math.max(0, Math.min(time, duration))
-
-      if (activeHandle === 'start') {
-        updateTrimStart(clampedTime)
-        // Sync playhead to follow trim start
-        setPlayhead(clampedTime)
-      } else {
-        updateTrimEnd(clampedTime)
-      }
-    }
-
-    const handleMouseUp = () => {
-      setActiveHandle(null)
-      setIsDragging(false)
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [
-    activeHandle,
-    pixelsPerSecond,
-    duration,
-    timelineScrollOffset,
-    updateTrimStart,
-    updateTrimEnd,
-    setActiveHandle,
-    setIsDragging,
-    setPlayhead
-  ])
-
-  // Handle playhead mouse down
-  const handlePlayheadMouseDown = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsDraggingPlayhead(true)
-  }, [])
-
-  // Handle playhead drag movement
-  useEffect(() => {
-    if (!isDraggingPlayhead || !trackRef.current) return
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = trackRef.current!.getBoundingClientRect()
-      const mouseX = e.clientX - rect.left + timelineScrollOffset
-
-      const time = mouseX / pixelsPerSecond
-      const clampedTime = Math.max(0, Math.min(time, duration))
-
-      setPlayhead(clampedTime)
-    }
-
-    const handleMouseUp = () => {
-      setIsDraggingPlayhead(false)
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [isDraggingPlayhead, pixelsPerSecond, duration, timelineScrollOffset, setPlayhead])
-
-  // Handle scroll for pan
-  const handleScroll = useCallback(
-    (e: React.UIEvent<HTMLDivElement>) => {
-      const scrollLeft = (e.target as HTMLDivElement).scrollLeft
-      setTimelineScrollOffset(scrollLeft)
-    },
-    [setTimelineScrollOffset]
-  )
-
-  // Show placeholder when no video selected
-  if (duration === 0) {
-    return (
-      <div className="w-full bg-gray-800 rounded-lg p-6 border border-gray-700 flex items-center justify-center min-h-32">
-        <p className="text-gray-400 text-center">Select a video to display timeline</p>
-      </div>
+  // Calculate duration and pixels per second
+  const calculateDuration = (): number => {
+    const videoDuration = timelineVideoClips.reduce(
+      (max, clip) => Math.max(max, clip.position + clip.effectiveDuration),
+      0
     )
+    const audioDuration = timelineAudioClips.reduce(
+      (max, clip) => Math.max(max, clip.position + clip.effectiveDuration),
+      0
+    )
+    return Math.max(videoDuration, audioDuration, 60) // Minimum 1 minute
   }
 
+  const totalDuration = calculateDuration()
+  const pixelsPerSecond = DEFAULT_PIXELS_PER_SECOND * zoomLevel
+  const timelineWidth = Math.max(totalDuration * pixelsPerSecond, 1400) // Min 1400px
+  const timeMarkerInterval = getTimeMarkerInterval(zoomLevel)
+  const timeMarkers = generateTimeMarkers(totalDuration, timeMarkerInterval)
+
+  // Handle playhead click to seek
+  const handlePlayheadClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!timelineScrollRef.current) return
+    const rect = timelineScrollRef.current.getBoundingClientRect()
+    const clickX = e.clientX - rect.left + timelineScrollRef.current.scrollLeft
+    const time = clickX / pixelsPerSecond
+    setPlayheadTime(Math.max(0, Math.min(time, totalDuration)))
+  }
+
+  // Handle zoom in
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, ZOOM_MAX))
+  }
+
+  // Handle zoom out
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => Math.max(prev - ZOOM_STEP, ZOOM_MIN))
+  }
+
+  // Handle mouse wheel zoom (Ctrl + Scroll)
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!e.ctrlKey && !e.metaKey) return
+    e.preventDefault()
+
+    const direction = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP
+    setZoomLevel((prev) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, prev + direction)))
+  }
+
+  // Handle drag over timeline
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, trackType: 'video' | 'audio') => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+    setDragOverTrack(trackType)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverTrack(null)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, trackType: 'video' | 'audio') => {
+    e.preventDefault()
+    setDragOverTrack(null)
+
+    const clipData = e.dataTransfer.getData('application/json')
+    if (clipData) {
+      try {
+        const libraryClip = JSON.parse(clipData)
+        const isVideoClip = libraryClip.width && libraryClip.height
+        const isAudioClip = !isVideoClip
+
+        if ((isVideoClip && trackType === 'video') || (isAudioClip && trackType === 'audio')) {
+          addClipToTrack(trackType, libraryClip)
+          console.log('✓ Added clip to', trackType, 'track:', libraryClip.name)
+        } else {
+          console.warn(`Cannot drop ${isVideoClip ? 'video' : 'audio'} clip to ${trackType} track`)
+        }
+      } catch (error) {
+        console.error('Failed to parse dropped clip:', error)
+      }
+    }
+  }
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 's' || e.key === 'S') {
+        if (selectedClipId) {
+          e.preventDefault()
+          console.log('Splitting clip', selectedClipId, 'at time', playheadTime)
+        }
+      } else if (e.key === 'Delete') {
+        if (selectedClipId) {
+          e.preventDefault()
+          console.log('Deleting clip', selectedClipId)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedClipId, playheadTime])
+
   return (
-    <div className="w-full space-y-4">
-      {/* Timeline Controls */}
-      <div className="flex flex-col gap-4">
-        {/* Zoom Controls and Trim Info */}
-        <div className="flex items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleZoomOut}
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white hover:bg-gray-700 h-8 w-8 p-0"
-              title="Zoom out (Ctrl + Scroll)"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </Button>
-            <span className="text-xs text-gray-400 min-w-fit">{Math.round(zoomLevel * 100)}%</span>
-            <Button
-              onClick={handleZoomIn}
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white hover:bg-gray-700 h-8 w-8 p-0"
-              title="Zoom in (Ctrl + Scroll)"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-4 text-sm text-gray-400">
-            <div>
-              <span>Start: </span>
-              <span className="text-white font-medium">{formatDuration(trimStart)}</span>
-            </div>
-            <div>
-              <span>Duration: </span>
-              <span className="text-white font-medium">{formatDuration(trimEnd - trimStart)}</span>
-            </div>
-            <div>
-              <span>End: </span>
-              <span className="text-white font-medium">{formatDuration(trimEnd)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Trim Point Display and Reset Button */}
-        <div className="flex items-center justify-between px-4">
-          <h3 className="text-sm font-semibold text-white">Trim Points</h3>
-          <Button
-            onClick={() => {
-              const { resetTrim } = useEditorStore.getState()
-              resetTrim()
-            }}
-            variant="ghost"
-            size="sm"
-            className="text-gray-400 hover:text-white hover:bg-gray-700 h-7 px-2 text-xs"
-            title="Reset trim to full video (R)"
+    <div className="timeline-container">
+      {/* Zoom Controls and Info */}
+      <div className="timeline-controls">
+        <div className="zoom-controls">
+          <button
+            onClick={handleZoomOut}
+            className="zoom-button"
+            title="Zoom out (−)"
+            disabled={zoomLevel <= ZOOM_MIN}
           >
-            <RotateCcw className="w-3 h-3 mr-1" />
-            Reset
-          </Button>
+            <ZoomOut size={16} />
+          </button>
+          <span className="zoom-level">{Math.round(zoomLevel * 100)}%</span>
+          <button
+            onClick={handleZoomIn}
+            className="zoom-button"
+            title="Zoom in (+)"
+            disabled={zoomLevel >= ZOOM_MAX}
+          >
+            <ZoomIn size={16} />
+          </button>
+        </div>
+        <div className="timeline-info">
+          <span className="info-label">
+            Tip: Ctrl+Scroll to zoom • Drag clips to timeline • S to split, Delete to remove
+          </span>
         </div>
       </div>
 
-      {/* Timeline Container */}
-      <div
-        ref={containerRef}
-        className="relative w-full bg-gray-800 rounded-lg border border-gray-700 overflow-hidden"
-      >
-        {/* Scrollable Track */}
-        <div
-          ref={trackRef}
-          className="relative w-full overflow-x-auto overflow-y-hidden bg-gray-900"
-          style={{ height: '120px', minHeight: '120px', maxHeight: '120px' }}
-          onClick={handleTimelineClick}
-          onWheel={handleWheel}
-          onScroll={handleScroll}
-        >
-          {/* Timeline Content */}
+      {/* Timeline Header with Time Markers */}
+      <div className="timeline-header-container">
+        <div className="timeline-header" style={{ width: `${timelineWidth}px` }}>
+          {timeMarkers.map((time) => (
+            <div key={time} className="time-marker" style={{ left: `${time * pixelsPerSecond}px` }}>
+              <div className="marker-line" />
+              <span className="time-label">{formatTime(time)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Timeline Tracks - Scrollable */}
+      <div className="timeline-scroll-container" ref={timelineScrollRef} onWheel={handleWheel}>
+        {/* Video Track */}
+        <div className="track-section">
+          <TrackHeader
+            trackType="video"
+            isMuted={isMuted.video}
+            onToggleMute={() => toggleTrackMute('video')}
+          />
           <div
-            className="relative bg-gradient-to-b from-gray-800 to-gray-900"
-            style={{
-              width: `${totalTimelineWidth}px`,
-              height: '100%'
-            }}
+            className={`track video-track ${dragOverTrack === 'video' ? 'drag-over' : ''}`}
+            onDragOver={(e) => handleDragOver(e, 'video')}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, 'video')}
           >
-            {/* Ruler and Time Markers */}
-            <div className="absolute top-0 left-0 w-full h-8 border-b border-gray-700">
-              {timeMarkers.map((marker) => (
-                <div
-                  key={marker.time}
-                  className="absolute h-full flex flex-col items-center"
-                  style={{
-                    left: `${marker.time * pixelsPerSecond}px`,
-                    width: '1px'
-                  }}
-                >
-                  {/* Marker line */}
-                  <div className="h-2 w-px bg-gray-600" />
-                  {/* Marker label */}
-                  <div className="text-xs text-gray-500 mt-1 whitespace-nowrap ml-1">
-                    {marker.label}
-                  </div>
-                </div>
+            <div
+              className="clip-container"
+              style={{ width: `${timelineWidth}px`, position: 'relative' }}
+            >
+              {timelineVideoClips.map((clip) => (
+                <TimelineClip
+                  key={clip.id}
+                  clip={clip}
+                  isSelected={selectedClipId === clip.id}
+                  onSelect={() => selectTimelineClip(clip.id)}
+                  pixelsPerSecond={pixelsPerSecond}
+                />
               ))}
             </div>
+          </div>
+        </div>
 
-            {/* Video Clip Bar */}
+        {/* Audio Track */}
+        <div className="track-section">
+          <TrackHeader
+            trackType="audio"
+            isMuted={isMuted.audio}
+            onToggleMute={() => toggleTrackMute('audio')}
+          />
+          <div
+            className={`track audio-track ${dragOverTrack === 'audio' ? 'drag-over' : ''}`}
+            onDragOver={(e) => handleDragOver(e, 'audio')}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, 'audio')}
+          >
             <div
-              className="absolute top-8 left-0 h-12 bg-gradient-to-r from-blue-600 to-blue-700 opacity-30 border-l border-r border-blue-500"
-              style={{
-                width: `${duration * pixelsPerSecond}px`
-              }}
-            />
-
-            {/* Trim Region Overlay */}
-            <div
-              className="absolute top-8 h-12 bg-blue-500 bg-opacity-40 border-l-2 border-r-2 border-blue-400"
-              style={{
-                left: `${trimStartPx}px`,
-                width: `${Math.max(
-                  0,
-                  Math.min(
-                    (trimEnd - trimStart) * pixelsPerSecond,
-                    totalTimelineWidth - trimStartPx
-                  )
-                )}px`
-              }}
-            />
-
-            {/* Dimmed regions outside trim area */}
-            {trimStart > 0 && (
-              <div
-                className="absolute top-8 h-12 bg-black opacity-40"
-                style={{
-                  left: '0',
-                  width: `${trimStart * pixelsPerSecond}px`
-                }}
-              />
-            )}
-            {trimEnd < duration && (
-              <div
-                className="absolute top-8 h-12 bg-black opacity-40"
-                style={{
-                  left: `${trimEnd * pixelsPerSecond}px`,
-                  width: `${(duration - trimEnd) * pixelsPerSecond}px`
-                }}
-              />
-            )}
-
-            {/* Trim Handle - Start */}
-            <motion.div
-              className="absolute top-8 h-12 w-2 bg-blue-400 cursor-ew-resize hover:bg-blue-300 transition-colors"
-              style={{
-                left: `${trimStart * pixelsPerSecond}px`
-              }}
-              onMouseDown={handleTrimHandleMouseDown('start')}
-              animate={{
-                backgroundColor: activeHandle === 'start' ? '#3b82f6' : '#60a5fa'
-              }}
-              transition={{ type: 'tween', duration: 0.1 }}
-            />
-
-            {/* Trim Handle - End */}
-            <motion.div
-              className="absolute top-8 h-12 w-2 bg-blue-400 cursor-ew-resize hover:bg-blue-300 transition-colors"
-              style={{
-                left: `${trimEndPxClamped}px`
-              }}
-              onMouseDown={handleTrimHandleMouseDown('end')}
-              animate={{
-                backgroundColor: activeHandle === 'end' ? '#3b82f6' : '#60a5fa'
-              }}
-              transition={{ type: 'tween', duration: 0.1 }}
-            />
-
-            {/* Playhead - with cursor for dragging */}
-            <motion.div
-              className="absolute top-0 h-full w-1 bg-red-500 cursor-grab active:cursor-grabbing"
-              style={{
-                left: `${playheadPxClamped}px`
-              }}
-              onMouseDown={handlePlayheadMouseDown}
-              whileHover={{ scaleX: 1.5, backgroundColor: '#ff6b6b' }}
-              transition={{ type: 'tween', duration: 0.1 }}
+              className="clip-container"
+              style={{ width: `${timelineWidth}px`, position: 'relative' }}
             >
-              {/* Playhead indicator handle */}
-              <div className="absolute -top-2 -left-2 w-5 h-5 bg-red-500 rounded-full shadow-lg pointer-events-none" />
-            </motion.div>
-
-            {/* Current time tooltip on playhead */}
-            <div
-              className="absolute top-0 text-xs text-white bg-gray-900 px-2 py-1 rounded border border-gray-700 pointer-events-none"
-              style={{
-                left: `${playheadPxClamped}px`,
-                transform: 'translateX(-50%)',
-                marginTop: '-28px'
-              }}
-            >
-              {formatDuration(playhead)}
+              {timelineAudioClips.map((clip) => (
+                <TimelineClip
+                  key={clip.id}
+                  clip={clip}
+                  isSelected={selectedClipId === clip.id}
+                  onSelect={() => selectTimelineClip(clip.id)}
+                  pixelsPerSecond={pixelsPerSecond}
+                />
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Timeline Info Bar */}
-      <div className="text-xs text-gray-500 px-4">
-        <p>Tip: Click to seek, drag playhead to scrub, Ctrl+Scroll to zoom</p>
+      {/* Playhead - Absolute positioned over scrollable area */}
+      <div className="playhead-wrapper">
+        <div
+          className="playhead"
+          style={{
+            left: `${playheadTime * pixelsPerSecond}px`,
+            height: '100%'
+          }}
+          onClick={handlePlayheadClick}
+        >
+          <div className="playhead-line" />
+          <div className="playhead-time">{formatTime(playheadTime)}</div>
+        </div>
       </div>
     </div>
   )
 }
+
+export default Timeline
