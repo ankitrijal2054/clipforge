@@ -3,7 +3,9 @@ import { promises as fs } from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import { getFFmpegPath, validateFFmpegBinary, getMissingBinaryError } from './platform'
+import { getVideoMetadata } from './metadata'
 import { TimelineClip } from '../../types/timeline'
+import type { VideoClip } from '../../types/video'
 
 /**
  * Interface for timeline export parameters
@@ -46,14 +48,12 @@ async function createExportTempDir(): Promise<string> {
  * @param trimStart - Start time in seconds
  * @param trimEnd - End time in seconds
  * @param outputFile - Path to output segment
- * @param onProgress - Progress callback
  */
 async function extractSegment(
   sourceFile: string,
   trimStart: number,
   trimEnd: number,
-  outputFile: string,
-  _onProgress?: (progress: ExportProgress) => void
+  outputFile: string
 ): Promise<void> {
   if (!validateFFmpegBinary()) {
     throw new Error(getMissingBinaryError())
@@ -165,13 +165,8 @@ async function createConcatFile(segments: string[], outputFile: string): Promise
  *
  * @param concatFile - Path to concat.txt file
  * @param outputFile - Path to output video
- * @param onProgress - Progress callback
  */
-async function concatSegments(
-  concatFile: string,
-  outputFile: string,
-  _onProgress?: (progress: ExportProgress) => void
-): Promise<void> {
+async function concatSegments(concatFile: string, outputFile: string): Promise<void> {
   if (!validateFFmpegBinary()) {
     throw new Error(getMissingBinaryError())
   }
@@ -225,7 +220,7 @@ async function mixAudioVideo(
   audioFile: string,
   outputFile: string,
   quality: 'high' | 'medium' | 'low' = 'high',
-  _onProgress?: (progress: ExportProgress) => void
+  options?: { videoDurationSec?: number }
 ): Promise<void> {
   if (!validateFFmpegBinary()) {
     throw new Error(getMissingBinaryError())
@@ -235,27 +230,31 @@ async function mixAudioVideo(
   const audioQuality = quality === 'high' ? '192k' : quality === 'medium' ? '128k' : '96k'
 
   return new Promise((resolve, reject) => {
-    const ffmpeg = spawn(getFFmpegPath(), [
+    const videoDuration = Math.max(0, options?.videoDurationSec ?? 0)
+    const args = [
       '-i',
       videoFile,
       '-i',
       audioFile,
-      // Explicitly map streams to avoid accidentally including original video audio
+      // Pad external audio with silence, then trim exactly to video duration
+      '-filter_complex',
+      `[1:a]apad,atrim=0:${videoDuration},asetpts=PTS-STARTPTS[aud]`,
       '-map',
       '0:v:0',
       '-map',
-      '1:a:0',
+      '[aud]',
       '-c:v',
-      'copy', // Copy video as-is (already properly formatted)
+      'copy',
       '-c:a',
       'aac',
       '-b:a',
       audioQuality,
-      '-shortest', // Use shortest stream (handles duration mismatch)
       '-avoid_negative_ts',
       'make_zero',
       outputFile
-    ])
+    ]
+
+    const ffmpeg = spawn(getFFmpegPath(), args)
 
     let errorOutput = ''
 
@@ -311,7 +310,7 @@ async function cleanupTempDir(tempDir: string): Promise<void> {
  * @param onProgress - Progress callback for UI updates
  */
 export async function exportTimeline(
-  params: TimelineExportParams & { clips: any[] }, // clips from library
+  params: TimelineExportParams & { clips: VideoClip[] }, // clips from library
   onProgress?: (progress: ExportProgress) => void
 ): Promise<string> {
   const { videoClips, audioClips, isMuted, outputPath, quality, clips: libraryClips } = params
@@ -346,7 +345,7 @@ export async function exportTimeline(
     const videoSegments: string[] = []
     for (let i = 0; i < videoClips.length; i++) {
       const clip = videoClips[i]
-      const libraryClip = libraryClips.find((c: any) => c.id === clip.libraryId)
+      const libraryClip = libraryClips.find((c) => c.id === clip.libraryId)
 
       if (!libraryClip) {
         throw new Error(`Source file not found for clip ${clip.id}`)
@@ -386,7 +385,7 @@ export async function exportTimeline(
       const audioSegments: string[] = []
       for (let i = 0; i < audioClips.length; i++) {
         const clip = audioClips[i]
-        const libraryClip = libraryClips.find((c: any) => c.id === clip.libraryId)
+        const libraryClip = libraryClips.find((c) => c.id === clip.libraryId)
 
         if (!libraryClip) {
           throw new Error(`Source file not found for audio clip ${clip.id}`)
@@ -418,7 +417,16 @@ export async function exportTimeline(
       onProgress?.({ phase: phases.mixAudio, progress: totalProgress, totalPhases: 6 })
 
       finalOutput = outputPath // Final output is the mixed file
-      await mixAudioVideo(videoOutput, audioOutput, finalOutput, quality)
+
+      // Get actual concatenated video duration via FFprobe to avoid keyframe rounding issues
+      const videoMeta = await getVideoMetadata(videoOutput)
+      const totalVideoDuration = Number.isFinite(videoMeta.duration)
+        ? videoMeta.duration
+        : videoClips.reduce((sum, c) => sum + (c.trimEnd - c.trimStart), 0)
+
+      await mixAudioVideo(videoOutput, audioOutput, finalOutput, quality, {
+        videoDurationSec: totalVideoDuration
+      })
 
       totalProgress = 90
       onProgress?.({ phase: phases.mixAudio, progress: totalProgress, totalPhases: 6 })
