@@ -199,25 +199,24 @@ export const Timeline: React.FC = () => {
     }
   }
 
-  // Handle keyboard shortcuts
+  // Handle keyboard shortcuts with comprehensive debugging
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 's' || e.key === 'S') {
         if (selectedClipId) {
           e.preventDefault()
-          // Split selected clip at playhead position
           splitClip(selectedClipId, playheadTime)
-          console.log('✓ Split clip', selectedClipId, 'at time', playheadTime)
+        } else {
+          console.log('⚠️ No clip selected, cannot split')
         }
-      } else if (e.key === 'Delete') {
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedClipId) {
           e.preventDefault()
-          // Determine which track contains the selected clip
           const isInVideoTrack = timelineVideoClips.some((c) => c.id === selectedClipId)
           const trackType = isInVideoTrack ? 'video' : 'audio'
-          // Delete the clip from its track
           removeClipFromTrack(trackType, selectedClipId)
-          console.log('✓ Deleted clip', selectedClipId, 'from', trackType, 'track')
+        } else {
+          console.log('⚠️ No clip selected, cannot delete')
         }
       }
     }
