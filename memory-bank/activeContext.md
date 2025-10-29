@@ -1,13 +1,15 @@
 # ClipForge Active Context
 
-## Current Status: Phase 2A - Recording System COMPLETE ✅ (Tasks 1-33 Complete)
+## Current Status: Phase 2A - Recording System COMPLETE ✅ (Tasks 1-33 Complete + Bug Fixes)
 
-**Phase 2A Status:** 100% Complete - Recording System with File Management  
+**Phase 2A Status:** 100% Complete - Recording System with File Management + Bug Fixes  
 **Phase 2B Status:** Ready for Implementation - Timeline System
 
 ## Recent Achievements
 
-### ✅ **Phase 2A Tasks 1-28: Recording UI & Controls** - COMPLETE
+### ✅ **Phase 2A Tasks 1-33: Recording System + File Management** - COMPLETE
+
+**Recording UI & Controls (Tasks 1-28):**
 
 - Recording panel with mode selection (Screen, Webcam, PiP)
 - Device selection dropdowns (audio, webcam, screen sources)
@@ -16,178 +18,179 @@
 - Start, Pause, Resume, Stop controls
 - Real-time recording feedback and error handling
 
-### ✅ **Phase 2A Tasks 29-33: File Management & Auto-Import** - COMPLETE
+**File Management & Integration (Tasks 29-33):**
 
-- **Task 29:** Temp file management (timestamped files in OS temp directory)
-- **Task 30:** Auto-import system (recordings extractable to media library)
-- **Task 31:** Timeline integration (ready for Phase 2B)
-- **Task 32:** File cleanup (automatic on app close, manual deletion via UI)
-- **Task 33:** Recording metadata storage (all recording info extracted & cached)
+- Temp file management with timestamped filenames
+- Auto-import system to media library
+- Timeline integration (ready for Phase 2B)
+- File cleanup (automatic on app close, manual deletion)
+- Recording metadata storage (duration, resolution, bitrate)
 
-**Files Created/Modified:**
+### ✅ **Bug Fixes & Refinements**
 
-- `src/main/ipc/recordingHandlers.ts` - Enhanced with file management handlers
-- `src/preload/index.ts` - Added IPC wrappers for file operations
-- `src/preload/index.d.ts` - Added type definitions for file management
-- `src/renderer/src/hooks/useRecordingImport.ts` - New import hook
-- `src/renderer/src/components/recording/RecordingImporter.tsx` - New importer component
-- `src/renderer/src/components/recording/RecordingPanel.tsx` - Updated with importer
-- `FILE_MANAGEMENT_GUIDE.md` - Comprehensive documentation
-- `src/main/index.ts` - Added cleanup on app quit
+**Auto-Refresh System:**
 
-## File Management Architecture
+- Recent recordings now auto-refresh immediately after recording completes
+- New IPC event: `recording:dataSaved` fires when file is saved
+- RecordingImporter listens to both `onRecordingStopped` and `onRecordingDataSaved`
 
-### New IPC Handlers
+**Duration & Metadata Tracking:**
 
-- `recording:getRecordedVideos` - List recorded videos
-- `recording:importRecording` - Import to media library
-- `recording:getMetadata` - Extract recording metadata
-- `recording:delete` - Delete recording file
-- `recording:cleanup` - Cleanup old recordings (7+ days)
+- Recording duration now calculated from actual recording time (Date.now() delta)
+- Duration passed through entire IPC chain: Renderer → Main → Handler → Cache
+- FFprobe used as fallback for metadata extraction
+- Metadata caching prevents redundant extraction
 
-### New React Components
+**Recording Timer:**
 
-- **RecordingImporter** - Shows recent recordings with import/delete buttons
-- **useRecordingImport** - Hook for import operations and file management
+- Timer now properly resets to 0:00 when recording stops
+- Duration correctly displays in Recent Recordings list
+- Videos play smoothly without stuttering
 
-### Integration
+**Metadata Extraction:**
 
-- RecordingImporter integrated into RecordingPanel
-- Seamless workflow: Record → Import → Edit in Media Library
-- Metadata cached for fast access
-- Toast notifications for user feedback
+- Immediate extraction after recording is saved
+- Fallback values for all fields (never NaN)
+- Console logging for debugging metadata extraction
+- Resolution, frame rate, bitrate properly captured
+
+## Architecture Overview
+
+```
+Recording Flow:
+1. User starts recording → useScreenRecorder creates MediaRecorder
+2. Recording happens → Duration tracked via Date.now()
+3. User stops recording → recordingDuration passed to save handler
+4. IPC: saveRecordingData(arrayBuffer, fileName, recordingDuration)
+5. Main: Saves file, extracts/caches metadata
+6. Event: recording:dataSaved fires
+7. UI: RecordingImporter auto-refreshes with new recording
+8. User imports → Metadata preserved, clip added to library
+```
 
 ## Current Capabilities
 
-### 🎬 **Recording System (Phase 2A)**
+### 🎬 **Recording System (Phase 2A)** - Production Ready
 
-1. **Recording Modes**
-   - Screen recording with source selection
-   - Webcam recording with device selection
-   - Picture-in-Picture mode (screen + webcam overlay)
+**Recording Modes:**
 
-2. **File Management**
-   - Automatic temp directory management
-   - Timestamped filenames prevent conflicts
-   - Metadata extraction via FFmpeg
-   - 7-day automatic cleanup
+- ✅ Screen recording with source selection
+- ✅ Webcam recording with device selection
+- ✅ Picture-in-Picture mode (screen + webcam overlay)
+- ✅ Quality presets (High/Medium/Low)
 
-3. **Auto-Import Workflow**
-   - Recent recordings displayed in RecordingImporter
-   - One-click import to media library
-   - Toast notifications for feedback
-   - Manual deletion support
+**File Management:**
 
-4. **Recording Controls**
-   - Start/Pause/Resume/Stop buttons
-   - Real-time duration display
-   - Quality presets (High/Medium/Low)
-   - Error handling with user feedback
+- ✅ Automatic temp directory organization (timestamped files)
+- ✅ Metadata extraction & caching
+- ✅ Auto-refresh on new recordings
+- ✅ Manual deletion support
+- ✅ 7-day automatic cleanup on app quit
+
+**Metadata Captured:**
+
+- ✅ Duration (from actual recording time)
+- ✅ Resolution (width × height)
+- ✅ Frame rate (30/60 fps)
+- ✅ Bitrate
+- ✅ Recording type (screen/webcam/pip)
+- ✅ File size
+- ✅ Creation timestamp
+
+**User Experience:**
+
+- ✅ Recent Recordings always visible and refreshed
+- ✅ One-click import to Media Library
+- ✅ Recordings stay in list after import (can reimport)
+- ✅ Recording timer shows accurate duration
+- ✅ Timer resets to 0:00 after recording stops
+- ✅ Toast notifications for all operations
+- ✅ Smooth playback without stuttering
+
+## Files Modified/Created
+
+### Backend (Main Process)
+
+- `src/main/ipc/recordingHandlers.ts` - 5 new file management handlers
+- `src/main/ffmpeg/metadata.ts` - Enhanced with better error handling and logging
+- `src/main/index.ts` - Added cleanup on app quit
+
+### Frontend (Renderer)
+
+- `src/renderer/src/hooks/useRecording.ts` - Recording timer reset fix
+- `src/renderer/src/hooks/useRecordingImport.ts` - Import and file management logic
+- `src/renderer/src/hooks/useScreenRecorder.ts` - Duration tracking via Date.now()
+- `src/renderer/src/components/recording/RecordingImporter.tsx` - Recent recordings UI with auto-refresh
+- `src/renderer/src/components/recording/RecordingPanel.tsx` - Integrated RecordingImporter
+
+### IPC Layer
+
+- `src/preload/index.ts` - Added handlers for file management and data saved event
+- `src/preload/index.d.ts` - Added type definitions
+
+## Quality Improvements
+
+### Performance
+
+- Metadata caching prevents redundant FFprobe calls
+- Async operations don't block UI
+- Recording duration tracked efficiently via timestamps
+- Auto-cleanup runs only on app quit
+
+### Reliability
+
+- Safe fallbacks for all metadata fields
+- Graceful error handling if FFprobe fails
+- Duration never becomes NaN
+- Files recoverable even if metadata extraction fails
+
+### User Experience
+
+- Immediate feedback via toast notifications
+- Recent recordings auto-refresh in real-time
+- Smooth video playback at 30/60 fps
+- Professional UI with animations
+
+## IPC Handlers Summary
+
+| Handler                       | Purpose                                |
+| ----------------------------- | -------------------------------------- |
+| `recording:getRecordedVideos` | List all recorded videos with metadata |
+| `recording:importRecording`   | Import recording to media library      |
+| `recording:getMetadata`       | Extract/retrieve recording metadata    |
+| `recording:delete`            | Delete recording file                  |
+| `recording:cleanup`           | Remove files older than 7 days         |
+| `recording:dataSaved`         | Event fired after file is saved        |
 
 ## Next Steps
 
 ### 🚀 **Phase 2B: Multi-Clip Timeline** (Ready to Start)
 
-1. **Timeline Component**
-   - 2-track timeline (video + audio)
-   - Drag-and-drop with @dnd-kit
-   - Clip operations (trim, split, delete)
-   - Snap-to-grid functionality
+Timeline system can leverage Phase 2A foundation:
 
-2. **Store Extension**
-   - Timeline state management
-   - Clip positioning and duration
-   - Multi-clip selection
+- Duration: For clip length calculation
+- Resolution: For preview rendering
+- Frame rate: For timeline snapping
+- Metadata cache: For fast access
 
-3. **Multi-Clip Playback**
-   - Sequential clip playback
-   - Audio mixing with Web Audio API
-   - Playhead synchronization
+### Current Status Summary
 
-4. **Multi-Clip Export**
-   - FFmpeg concat implementation
-   - Progress tracking
-   - Quality preservation
+✅ **Phase 2A:** 100% Complete - Recording system production-ready  
+✅ **Bug Fixes:** All issues resolved (duration, timer, auto-refresh, playback)  
+✅ **Testing:** Comprehensive manual testing completed  
+✅ **Documentation:** In-progress via memory bank updates
 
-## Quality Metrics
+**Ready for Phase 2B: Timeline Implementation**
 
-### ✅ **Recording System**
+## Development Environment
 
-- All 33 tasks complete (Tasks 1-33)
-- Comprehensive file management
-- Auto-import workflow integrated
-- Error handling throughout
-- Toast notifications for UX
-
-### ✅ **Code Quality**
-
-- TypeScript throughout
-- Proper type definitions
-- Error handling at every step
-- Loading states for async operations
-- Clean component structure
-
-### ✅ **Testing Ready**
-
-- Comprehensive FILE_MANAGEMENT_GUIDE.md
-- Test checklist for all features
-- Troubleshooting guide included
-- Performance considerations documented
-
-## Development Notes
-
-### File Organization
-
-```
-src/
-├── main/
-│   └── ipc/
-│       └── recordingHandlers.ts (Enhanced)
-├── renderer/
-│   └── src/
-│       ├── hooks/
-│       │   └── useRecordingImport.ts (New)
-│       └── components/
-│           └── recording/
-│               ├── RecordingImporter.tsx (New)
-│               └── RecordingPanel.tsx (Updated)
-```
-
-### Key Patterns
-
-- IPC handlers for file operations
-- React hooks for import logic
-- Zustand store integration
-- Toast notifications for feedback
-- Metadata caching for performance
-
-### Environment
-
-- **OS**: macOS (M2) - Primary development
+- **OS**: macOS (M2)
 - **Node.js**: 22.11.0
-- **Package Manager**: npm
-- **IDE**: Cursor with TypeScript support
-- **Git**: Branch `recording` (current work)
+- **Git Branch**: `recording`
+- **Build System**: Electron Vite + Electron Builder
+- **State Management**: Zustand
+- **UI Components**: ShadCN/UI + Tailwind CSS
 
-## Success Summary
+---
 
-**Phase 2A Recording System is 100% Complete:**
-
-✅ Full recording capabilities (Screen, Webcam, PiP)  
-✅ Professional UI with status display  
-✅ Comprehensive file management  
-✅ Auto-import to media library  
-✅ Metadata storage and caching  
-✅ Automatic cleanup on app close  
-✅ Toast notifications for feedback  
-✅ Production-ready error handling
-
-**Ready for Phase 2B: Timeline System Implementation**
-
-## Distribution Status
-
-- **MVP**: 100% Complete (v1.0.0)
-- **Phase 2A**: 100% Complete (Recording System)
-- **Phase 2B**: Ready for Implementation (Timeline System)
-
-The application is positioned for continued development with a solid foundation of recording capabilities and file management infrastructure.
+**Phase 2A Recording System is complete, tested, and production-ready.**
