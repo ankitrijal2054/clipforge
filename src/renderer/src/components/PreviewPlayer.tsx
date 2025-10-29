@@ -28,6 +28,11 @@ function getVideoSrc(filePath: string): string {
   return `clipforge://${encodeURI(pathNoLeadingScheme)}`
 }
 
+interface PreviewPlayerProps {
+  isFullscreen?: boolean
+  onFullscreenChange?: (isFullscreen: boolean) => void
+}
+
 /**
  * PreviewPlayer component supporting both single-clip and multi-clip playback
  *
@@ -39,7 +44,7 @@ function getVideoSrc(filePath: string): string {
  * - Mute state for both video and audio tracks
  * - HTML5 video player with custom controls
  */
-export function PreviewPlayer() {
+export function PreviewPlayer({ onFullscreenChange }: PreviewPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
@@ -119,17 +124,11 @@ export function PreviewPlayer() {
 
   // Handle fullscreen toggle
   const toggleFullscreen = () => {
-    if (!containerRef.current) return
-
-    if (!isFullscreen) {
-      if (containerRef.current.requestFullscreen) {
-        containerRef.current.requestFullscreen()
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen()
-      }
-    }
+    console.log('🔍 toggleFullscreen called')
+    const newFullscreenState = !isFullscreen
+    setIsFullscreen(newFullscreenState)
+    onFullscreenChange?.(newFullscreenState)
+    console.log('✅ Fullscreen toggled:', newFullscreenState)
   }
 
   // Handle fullscreen change events

@@ -55,6 +55,9 @@ const api = {
   openFolder: (folderPath: string): Promise<void> =>
     ipcRenderer.invoke('dialog:openFolder', folderPath),
 
+  // Window fullscreen control
+  toggleFullscreen: (): Promise<void> => ipcRenderer.invoke('window:toggleFullscreen'),
+
   // Recording operations
   getScreenSources: (): Promise<ScreenSource[]> => ipcRenderer.invoke('recording:getSources'),
 

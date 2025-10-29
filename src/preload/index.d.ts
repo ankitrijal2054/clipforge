@@ -39,6 +39,9 @@ declare global {
       selectExportPath: (defaultFilename: string) => Promise<string | null>
       openFolder: (folderPath: string) => Promise<void>
 
+      // Window fullscreen control
+      toggleFullscreen: () => Promise<void>
+
       // Recording operations
       getScreenSources: () => Promise<ScreenSource[]>
       getAudioDevices: () => Promise<MediaDeviceInfo[]>

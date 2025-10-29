@@ -109,6 +109,15 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // Fullscreen toggle handler
+  ipcMain.handle('window:toggleFullscreen', async () => {
+    const focusedWindow = BrowserWindow.getFocusedWindow()
+    if (focusedWindow) {
+      focusedWindow.setFullScreen(!focusedWindow.isFullScreen())
+      console.log('📺 Fullscreen toggled:', focusedWindow.isFullScreen())
+    }
+  })
+
   // Create window and register IPC handlers
   const mainWindow = createWindow()
   registerIpcHandlers(mainWindow)
