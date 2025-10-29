@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Download, Mic } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { useState } from 'react'
 import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
@@ -14,30 +14,28 @@ import { useEditorStore } from '../../../stores/editorStore'
  * Layout component for the main application interface
  *
  * Features:
- * - Responsive layout with sidebar
- * - Sidebar with media library and recording panel
- * - Main content area with video preview
- * - Timeline component below preview
- * - Smooth transitions
- * - Proper responsive spacing ensuring nothing goes out of bounds
+ * - Left sidebar: Import Manager and Media Library
+ * - Main content area: Video Preview and Timeline
+ * - Right sidebar: Recording section with scrollable recent recordings
+ * - Responsive layout ensuring nothing goes out of bounds
  */
 export function Layout(): React.ReactElement {
   const { clips } = useEditorStore()
   const timelineVideoClips = useEditorStore((state) => state.timelineVideoClips)
   const setActiveModal = useEditorStore((state) => state.setActiveModal)
-  const [sidebarTab, setSidebarTab] = useState<'library' | 'recording'>('library')
   const [isPreviewFullscreen, setIsPreviewFullscreen] = useState(false)
 
   return (
     <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
-      {/* Sidebar - hidden in fullscreen mode */}
+      {/* LEFT SIDEBAR - Import Manager and Library */}
       {!isPreviewFullscreen && (
         <motion.div
-          className="w-80 bg-gray-800/95 backdrop-blur-sm border-r border-gray-700 flex flex-col shadow-xl overflow-hidden"
-          initial={{ x: -320 }}
+          className="w-64 bg-gray-800/95 backdrop-blur-sm border-r border-gray-700 flex flex-col shadow-xl overflow-hidden"
+          initial={{ x: -256 }}
           animate={{ x: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
+          {/* Header */}
           <div className="p-2 border-b border-gray-700 flex-shrink-0">
             <div className="flex items-center space-x-3 mb-2">
               <div className="w-16 h-16 rounded-lg flex items-center justify-center overflow-hidden">
@@ -46,7 +44,6 @@ export function Layout(): React.ReactElement {
                   alt="ClipForge"
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    // Fallback to gradient if icon fails to load
                     const target = e.target as HTMLImageElement
                     target.style.display = 'none'
                     const parent = target.parentElement
@@ -66,47 +63,14 @@ export function Layout(): React.ReactElement {
             <ImportManager />
           </div>
 
-          {/* Tab Navigation */}
-          <div className="flex gap-2 p-4 border-b border-gray-700 flex-shrink-0">
-            <button
-              onClick={() => setSidebarTab('library')}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors ${
-                sidebarTab === 'library'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
-              Library
-            </button>
-            <button
-              onClick={() => setSidebarTab('recording')}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
-                sidebarTab === 'recording'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
-              <Mic className="w-3 h-3" />
-              Record
-            </button>
-          </div>
-
-          {/* Sidebar Content - scrollable if needed */}
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {sidebarTab === 'recording' ? (
-              <div className="p-4 h-full overflow-y-auto">
-                <RecordingPanel />
+          {/* Media Library - scrollable */}
+          {clips.length > 0 && (
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="p-4">
+                <MediaLibrary />
               </div>
-            ) : clips.length === 0 ? (
-              <div className="p-4">{/* ImportManager already shown at top */}</div>
-            ) : (
-              <div className="p-4 h-full flex flex-col">
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  <MediaLibrary />
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Export Button - fixed at bottom */}
           {clips.length > 0 && (
@@ -129,7 +93,7 @@ export function Layout(): React.ReactElement {
         </motion.div>
       )}
 
-      {/* Main Content Area - flex column that fills remaining space */}
+      {/* MAIN CONTENT AREA - Preview and Timeline */}
       <div
         className={`flex-1 flex flex-col ${
           isPreviewFullscreen ? 'overflow-hidden' : 'bg-gray-900 overflow-hidden p-4 gap-3'
@@ -150,7 +114,6 @@ export function Layout(): React.ReactElement {
                   alt="ClipForge"
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    // Fallback to gradient if icon fails to load
                     const target = e.target as HTMLImageElement
                     target.style.display = 'none'
                     const parent = target.parentElement
@@ -171,11 +134,11 @@ export function Layout(): React.ReactElement {
                 <div className="space-y-3 text-gray-400">
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Click "Record" tab to start recording video</span>
+                    <span>Use the right panel to start recording video</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Or click "Library" to import existing videos</span>
+                    <span>Or use the left panel to import existing videos</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -219,6 +182,18 @@ export function Layout(): React.ReactElement {
           </>
         )}
       </div>
+
+      {/* RIGHT SIDEBAR - Recording Section */}
+      {!isPreviewFullscreen && (
+        <motion.div
+          className="w-64 bg-gray-800/95 backdrop-blur-sm border-l border-gray-700 flex flex-col shadow-xl overflow-hidden"
+          initial={{ x: 256 }}
+          animate={{ x: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+          <RecordingPanel />
+        </motion.div>
+      )}
 
       {/* Export Modal - floats above all content */}
       <ExportModal />
