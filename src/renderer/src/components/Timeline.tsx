@@ -252,14 +252,13 @@ export const Timeline: React.FC = () => {
       </div>
 
       {/* UNIFIED Scroll Container for Header and Tracks */}
-      <div
-        className="timeline-scroll-container"
-        ref={scrollContainerRef}
-        onWheel={handleWheel}
-        onClick={handlePlayheadAreaClick}
-      >
-        {/* Header with Time Markers */}
-        <div className="timeline-header-row" style={{ width: `${timelineWidth}px` }}>
+      <div className="timeline-scroll-container" ref={scrollContainerRef} onWheel={handleWheel}>
+        {/* Header with Time Markers - Click to seek playhead */}
+        <div
+          className="timeline-header-row"
+          style={{ width: `${timelineWidth}px` }}
+          onClick={handlePlayheadAreaClick}
+        >
           <div className="header-spacer" style={{ width: `${TRACK_HEADER_WIDTH}px` }} />
           <div className="timeline-header">
             {timeMarkers.map((time) => (
