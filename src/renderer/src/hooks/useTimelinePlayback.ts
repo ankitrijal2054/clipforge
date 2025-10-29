@@ -75,6 +75,9 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  // Track sources to fix URL normalization bug (browsers normalize URLs, so direct comparison fails)
+  const pendingVideoSrcRef = useRef<string | null>(null)
+  const pendingAudioSrcRef = useRef<string | null>(null)
 
   // Get state from store
   const { timelineVideoClips, timelineAudioClips, isMuted, clips: libraryClips } = useEditorStore()
@@ -123,8 +126,12 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
         const playbackTime = calculateClipPlaybackTime(currentTime, activeVideoClip)
 
         // Load clip if not already loaded
-        if (videoRef.current.src !== `clipforge://${clipPath}`) {
-          videoRef.current.src = `clipforge://${clipPath}`
+        // CRITICAL: Compare against pendingVideoSrcRef, NOT videoRef.current.src
+        // because browsers normalize URLs (spaces→%20, etc) so comparison always fails
+        const expectedSrc = `clipforge://${clipPath}`
+        if (!pendingVideoSrcRef.current || pendingVideoSrcRef.current !== expectedSrc) {
+          videoRef.current.src = expectedSrc
+          pendingVideoSrcRef.current = expectedSrc
         }
 
         // Set playback position (with small tolerance for floating point)
@@ -144,6 +151,8 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
         } else {
           videoRef.current.pause()
         }
+
+        // Frame-by-frame logging disabled - too verbose
       } else {
         // No active video clip at this time
         videoRef.current.pause()
@@ -160,8 +169,12 @@ export const useTimelinePlayback = (): TimelinePlaybackReturn => {
         const playbackTime = calculateClipPlaybackTime(currentTime, activeAudioClip)
 
         // Load clip if not already loaded
-        if (audioRef.current.src !== `clipforge://${clipPath}`) {
-          audioRef.current.src = `clipforge://${clipPath}`
+        // CRITICAL: Compare against pendingAudioSrcRef, NOT audioRef.current.src
+        // because browsers normalize URLs
+        const expectedAudioSrc = `clipforge://${clipPath}`
+        if (!pendingAudioSrcRef.current || pendingAudioSrcRef.current !== expectedAudioSrc) {
+          audioRef.current.src = expectedAudioSrc
+          pendingAudioSrcRef.current = expectedAudioSrc
         }
 
         // Set playback position

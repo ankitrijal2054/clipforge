@@ -245,6 +245,8 @@ export function PreviewPlayer() {
             className={
               isFullscreen ? 'w-full h-full object-contain' : 'w-full h-full object-contain'
             }
+            preload="metadata"
+            crossOrigin="anonymous"
             onError={(e) => {
               console.error('Timeline video error:', e)
             }}
@@ -253,7 +255,9 @@ export function PreviewPlayer() {
         )}
 
         {/* Hidden Audio Element for timeline mode */}
-        {isTimelineMode && <audio ref={timelinePlayback.audioRef} />}
+        {isTimelineMode && (
+          <audio ref={timelinePlayback.audioRef} preload="metadata" crossOrigin="anonymous" />
+        )}
 
         {/* Trim Region Overlay (single-clip mode only) */}
         {!isTimelineMode && duration > 0 && (
