@@ -47,28 +47,60 @@ ipcMain.handle('recording:getRecordedVideos', async (): Promise<any[]> => {
     await mkdir(recordingsDir, { recursive: true })
 
     const files = await readdir(recordingsDir)
-    const recordedVideos = []
+    const recordedVideos: any[] = []
 
     for (const file of files) {
       if (!file.endsWith('.webm') && !file.endsWith('.mp4')) continue
 
       const filePath = join(recordingsDir, file)
-      const stats = await stat(filePath)
 
       try {
-        const metadata = await getVideoMetadata(filePath)
+        const stats = await stat(filePath)
+
+        // Try to get cached metadata first
+        let metadata = recordingMetadata.get(filePath)
+
+        // If not cached, extract now
+        if (!metadata) {
+          try {
+            const videoMetadata = await getVideoMetadata(filePath)
+            metadata = {
+              filePath,
+              startTime: stats.mtimeMs,
+              duration: videoMetadata.duration,
+              resolution: { width: videoMetadata.width, height: videoMetadata.height },
+              frameRate: videoMetadata.frameRate || 30,
+              bitrate: videoMetadata.bitRate || 0,
+              recordingType: recordingState.recordingType || 'unknown'
+            }
+            recordingMetadata.set(filePath, metadata)
+          } catch (err) {
+            console.warn(`Failed to extract metadata for ${file}:`, err)
+            // Use fallback values
+            metadata = {
+              filePath,
+              startTime: stats.mtimeMs,
+              duration: 0,
+              resolution: { width: 0, height: 0 },
+              frameRate: 30,
+              bitrate: 0,
+              recordingType: recordingState.recordingType || 'unknown'
+            }
+          }
+        }
+
         recordedVideos.push({
           name: file,
           path: filePath,
           fileSize: stats.size,
           duration: metadata.duration,
-          width: metadata.width,
-          height: metadata.height,
-          bitRate: metadata.bitRate || 0,
+          width: metadata.resolution.width,
+          height: metadata.resolution.height,
+          bitRate: metadata.bitrate || 0,
           recordedAt: stats.mtimeMs
         })
       } catch (err) {
-        console.warn(`Failed to extract metadata for ${file}:`, err)
+        console.warn(`Failed to process recording ${file}:`, err)
       }
     }
 
@@ -91,17 +123,26 @@ ipcMain.handle(
       // Extract metadata if not provided
       let clipMetadata = metadata
       if (!clipMetadata) {
-        const videoMetadata = await getVideoMetadata(filePath)
-        const stats = await stat(filePath)
+        // Check if already cached
+        clipMetadata = recordingMetadata.get(filePath)
 
-        clipMetadata = {
-          filePath,
-          startTime: Date.now(),
-          duration: videoMetadata.duration,
-          resolution: { width: videoMetadata.width, height: videoMetadata.height },
-          frameRate: videoMetadata.frameRate || 30,
-          bitrate: videoMetadata.bitRate || 0,
-          recordingType: recordingState.recordingType || 'unknown'
+        // If not cached, extract now
+        if (!clipMetadata) {
+          const videoMetadata = await getVideoMetadata(filePath)
+          const stats = await stat(filePath)
+
+          clipMetadata = {
+            filePath,
+            startTime: stats.mtimeMs,
+            duration: videoMetadata.duration || 0,
+            resolution: { width: videoMetadata.width, height: videoMetadata.height },
+            frameRate: videoMetadata.frameRate || 30,
+            bitrate: videoMetadata.bitRate || 0,
+            recordingType: recordingState.recordingType || 'unknown'
+          }
+
+          // Cache for future use
+          recordingMetadata.set(filePath, clipMetadata)
         }
       }
 
@@ -116,7 +157,7 @@ ipcMain.handle(
         id: clipId,
         name: filename,
         path: filePath,
-        duration: clipMetadata.duration,
+        duration: clipMetadata.duration || 0,
         width: clipMetadata.resolution.width,
         height: clipMetadata.resolution.height,
         fileSize: (await stat(filePath)).size,
@@ -375,7 +416,8 @@ ipcMain.handle(
   async (
     event,
     data: ArrayBuffer,
-    fileName: string
+    fileName: string,
+    recordingDuration?: number
   ): Promise<{ success: boolean; filePath?: string; error?: string }> => {
     try {
       const outputPath = join(app.getPath('temp'), 'clipforge', 'recordings', fileName)
@@ -386,6 +428,46 @@ ipcMain.handle(
       // Write the recording data
       const buffer = Buffer.from(data)
       await writeFile(outputPath, buffer)
+
+      // Extract metadata immediately after saving
+      try {
+        const stats = await stat(outputPath)
+        const videoMetadata = await getVideoMetadata(outputPath)
+
+        const metadata: RecordingMetadata = {
+          filePath: outputPath,
+          startTime: stats.mtimeMs,
+          // Use provided duration if available, fallback to extracted duration
+          duration: recordingDuration || videoMetadata.duration || 0,
+          resolution: { width: videoMetadata.width, height: videoMetadata.height },
+          frameRate: videoMetadata.frameRate || 30,
+          bitrate: videoMetadata.bitRate || 0,
+          recordingType: recordingState.recordingType || 'unknown'
+        }
+
+        // Cache metadata for quick access
+        recordingMetadata.set(outputPath, metadata)
+        console.log('✓ Metadata extracted for recording:', {
+          path: outputPath,
+          duration: metadata.duration,
+          resolution: `${metadata.resolution.width}x${metadata.resolution.height}`,
+          fileSize: stats.size
+        })
+      } catch (metadataErr) {
+        console.warn('Warning: Failed to extract metadata for recording:', metadataErr)
+        // Continue anyway - use provided duration as fallback
+        const stats = await stat(outputPath)
+        const metadata: RecordingMetadata = {
+          filePath: outputPath,
+          startTime: stats.mtimeMs,
+          duration: recordingDuration || 0,
+          resolution: { width: 0, height: 0 },
+          frameRate: 30,
+          bitrate: 0,
+          recordingType: recordingState.recordingType || 'unknown'
+        }
+        recordingMetadata.set(outputPath, metadata)
+      }
 
       // Send recording saved event to notify RecordingImporter
       // Use a small delay to ensure file system is ready

@@ -49,7 +49,8 @@ declare global {
       getRecordingState: () => Promise<RecordingState>
       saveRecordingData: (
         data: ArrayBuffer,
-        fileName: string
+        fileName: string,
+        recordingDuration?: number
       ) => Promise<{ success: boolean; filePath?: string; error?: string }>
       getRecordingQualitySettings: () => Promise<Record<string, RecordingQuality>>
       cleanupRecordings: () => Promise<{ success: boolean; cleanedFiles?: number; error?: string }>

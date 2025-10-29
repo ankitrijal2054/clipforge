@@ -278,6 +278,7 @@ export function useScreenRecorder() {
         }
 
         const chunks: Blob[] = []
+        const recordingStartTime = Date.now() // Track when recording started
         const mediaRecorder = new MediaRecorder(recordingStream, {
           mimeType,
           videoBitsPerSecond:
@@ -317,14 +318,21 @@ export function useScreenRecorder() {
           // Save the recording
           try {
             const fileName = `recording-${Date.now()}.webm`
+            const recordingDuration = (Date.now() - recordingStartTime) / 1000 // Duration in seconds
+
             console.log('Preparing to save recording...')
             console.log('File name:', fileName)
             console.log('Blob size:', recordingData.size)
+            console.log('Recording duration:', recordingDuration.toFixed(2), 'seconds')
 
             const arrayBuffer = await recordingData.arrayBuffer()
             console.log('Converted to ArrayBuffer, size:', arrayBuffer.byteLength)
 
-            const result = await (window.api as any).saveRecordingData(arrayBuffer, fileName)
+            const result = await (window.api as any).saveRecordingData(
+              arrayBuffer,
+              fileName,
+              recordingDuration
+            )
             console.log('IPC saveRecordingData result:', result)
 
             if (result.success) {

@@ -77,9 +77,10 @@ const api = {
 
   saveRecordingData: (
     data: ArrayBuffer,
-    fileName: string
+    fileName: string,
+    recordingDuration?: number
   ): Promise<{ success: boolean; filePath?: string; error?: string }> =>
-    ipcRenderer.invoke('recording:saveData', data, fileName),
+    ipcRenderer.invoke('recording:saveData', data, fileName, recordingDuration),
 
   getRecordingQualitySettings: (): Promise<Record<string, RecordingQuality>> =>
     ipcRenderer.invoke('recording:getQualitySettings'),

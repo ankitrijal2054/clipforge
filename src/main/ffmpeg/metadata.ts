@@ -69,9 +69,9 @@ export async function getVideoMetadata(filePath: string): Promise<VideoMetadata>
             return
           }
 
-          const duration = parseFloat(format.duration)
-          const width = videoStream.width
-          const height = videoStream.height
+          const duration = parseFloat(format.duration) || 0
+          const width = videoStream.width || 0
+          const height = videoStream.height || 0
           const fileSize = parseInt(format.size) || 0
           const bitRate = parseInt(format.bit_rate) || parseInt(videoStream.bit_rate) || 0
           const frameRate = parseFrameRate(videoStream.r_frame_rate)
