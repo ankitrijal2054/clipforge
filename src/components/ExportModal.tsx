@@ -31,7 +31,8 @@ export function ExportModal(): React.JSX.Element | null {
     isMuted,
     clips: libraryClips,
     trimStart,
-    trimEnd
+    trimEnd,
+    timelineExportProgress
   } = useEditorStore()
 
   // Local modal state
@@ -54,7 +55,7 @@ export function ExportModal(): React.JSX.Element | null {
     }
   }, [selectedClip, exportMode])
 
-  // Update export status based on store state
+  // Update export status based on store state (single-clip path)
   useEffect(() => {
     if (isExporting) {
       setExportStatus('exporting')
@@ -143,9 +144,14 @@ export function ExportModal(): React.JSX.Element | null {
    * Handle multi-clip timeline export
    */
   const handleTimelineExport = async (): Promise<void> => {
-    // Set up progress listener
-    const unsubscribe = (window.api as any).onTimelineExportProgress?.((data: any) => {
-      useEditorStore.getState().setExportProgress(data.progress)
+    // Reset and set up progress listeners for timeline export
+    useEditorStore.getState().setTimelineExportProgress(0)
+    const unsubscribeProgress = (window.api as any).onTimelineExportProgress?.((data: any) => {
+      useEditorStore.getState().setTimelineExportProgress(Math.floor(data.progress))
+    })
+    const unsubscribeError = (window.api as any).onTimelineExportError?.((data: any) => {
+      setExportStatus('error')
+      setErrorMessage(data?.error || 'Timeline export failed')
     })
 
     try {
@@ -159,7 +165,8 @@ export function ExportModal(): React.JSX.Element | null {
         clips: libraryClips
       })
     } finally {
-      unsubscribe?.()
+      unsubscribeProgress?.()
+      unsubscribeError?.()
     }
   }
 
@@ -281,9 +288,14 @@ export function ExportModal(): React.JSX.Element | null {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-gray-400">
                   <span>Exporting...</span>
-                  <span className="font-medium">{exportProgress}%</span>
+                  <span className="font-medium">
+                    {exportMode === 'timeline' ? timelineExportProgress : exportProgress}%
+                  </span>
                 </div>
-                <Progress value={exportProgress} className="w-full h-2" />
+                <Progress
+                  value={exportMode === 'timeline' ? timelineExportProgress : exportProgress}
+                  className="w-full h-2"
+                />
               </div>
             )}
 

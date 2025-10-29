@@ -53,7 +53,7 @@ async function extractSegment(
   trimStart: number,
   trimEnd: number,
   outputFile: string,
-  onProgress?: (progress: ExportProgress) => void
+  _onProgress?: (progress: ExportProgress) => void
 ): Promise<void> {
   if (!validateFFmpegBinary()) {
     throw new Error(getMissingBinaryError())
@@ -96,6 +96,58 @@ async function extractSegment(
 }
 
 /**
+ * Extract a single AUDIO segment from a source media using FFmpeg
+ * Forces consistent PCM WAV output to guarantee safe concatenation later
+ */
+async function extractAudioSegment(
+  sourceFile: string,
+  trimStart: number,
+  trimEnd: number,
+  outputFile: string
+): Promise<void> {
+  if (!validateFFmpegBinary()) {
+    throw new Error(getMissingBinaryError())
+  }
+
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn(getFFmpegPath(), [
+      '-i',
+      sourceFile,
+      '-ss',
+      trimStart.toString(),
+      '-to',
+      trimEnd.toString(),
+      '-vn', // drop any video
+      '-acodec',
+      'pcm_s16le', // WAV PCM 16-bit
+      '-ar',
+      '48000', // 48kHz sample rate
+      '-ac',
+      '2', // stereo
+      outputFile
+    ])
+
+    let errorOutput = ''
+
+    ffmpeg.stderr.on('data', (data) => {
+      errorOutput += data.toString()
+    })
+
+    ffmpeg.on('close', (code) => {
+      if (code === 0) {
+        resolve()
+      } else {
+        reject(new Error(`FFmpeg audio segment extraction failed: ${errorOutput}`))
+      }
+    })
+
+    ffmpeg.on('error', (error) => {
+      reject(new Error(`Failed to start FFmpeg for audio extraction: ${error.message}`))
+    })
+  })
+}
+
+/**
  * Create an FFmpeg concat demuxer file
  * Format: "file '/absolute/path/to/file.mp4'\n"
  *
@@ -118,7 +170,7 @@ async function createConcatFile(segments: string[], outputFile: string): Promise
 async function concatSegments(
   concatFile: string,
   outputFile: string,
-  onProgress?: (progress: ExportProgress) => void
+  _onProgress?: (progress: ExportProgress) => void
 ): Promise<void> {
   if (!validateFFmpegBinary()) {
     throw new Error(getMissingBinaryError())
@@ -173,7 +225,7 @@ async function mixAudioVideo(
   audioFile: string,
   outputFile: string,
   quality: 'high' | 'medium' | 'low' = 'high',
-  onProgress?: (progress: ExportProgress) => void
+  _onProgress?: (progress: ExportProgress) => void
 ): Promise<void> {
   if (!validateFFmpegBinary()) {
     throw new Error(getMissingBinaryError())
@@ -188,6 +240,11 @@ async function mixAudioVideo(
       videoFile,
       '-i',
       audioFile,
+      // Explicitly map streams to avoid accidentally including original video audio
+      '-map',
+      '0:v:0',
+      '-map',
+      '1:a:0',
       '-c:v',
       'copy', // Copy video as-is (already properly formatted)
       '-c:a',
@@ -335,8 +392,8 @@ export async function exportTimeline(
           throw new Error(`Source file not found for audio clip ${clip.id}`)
         }
 
-        const segmentPath = path.join(tempDir, `audio_${i}.mp3`)
-        await extractSegment(libraryClip.path, clip.trimStart, clip.trimEnd, segmentPath)
+        const segmentPath = path.join(tempDir, `audio_${i}.wav`)
+        await extractAudioSegment(libraryClip.path, clip.trimStart, clip.trimEnd, segmentPath)
         audioSegments.push(segmentPath)
 
         totalProgress = 55 + 15 * ((i + 1) / audioClips.length)
@@ -348,7 +405,7 @@ export async function exportTimeline(
       if (audioSegments.length === 1) {
         audioOutput = audioSegments[0]
       } else {
-        audioOutput = path.join(tempDir, 'audio_concat.mp3')
+        audioOutput = path.join(tempDir, 'audio_concat.wav')
         const audioConcatFile = path.join(tempDir, 'audio_concat.txt')
         await createConcatFile(audioSegments, audioConcatFile)
 
@@ -365,11 +422,35 @@ export async function exportTimeline(
 
       totalProgress = 90
       onProgress?.({ phase: phases.mixAudio, progress: totalProgress, totalPhases: 6 })
-    } else if (videoClips.length > 0 && !isMuted.video) {
-      // No audio or audio is muted - just move video to final output
-      await fs.rename(videoOutput, outputPath)
-      finalOutput = outputPath
-      totalProgress = 90
+    } else if (videoClips.length > 0) {
+      // No audio overlay (either none or muted)
+      if (!isMuted.video) {
+        // Keep original concatenated video (with its embedded audio)
+        await fs.rename(videoOutput, outputPath)
+        finalOutput = outputPath
+        totalProgress = 90
+      } else {
+        // Video track is muted – strip audio from the concatenated video
+        const mutedOutput = outputPath
+        await new Promise<void>((resolve, reject) => {
+          const ff = spawn(getFFmpegPath(), [
+            '-i',
+            videoOutput,
+            '-c:v',
+            'copy',
+            '-an', // no audio
+            '-avoid_negative_ts',
+            'make_zero',
+            mutedOutput
+          ])
+          let err = ''
+          ff.stderr.on('data', (d) => (err += d.toString()))
+          ff.on('close', (code) => (code === 0 ? resolve() : reject(new Error(err))))
+          ff.on('error', (e) => reject(e))
+        })
+        finalOutput = mutedOutput
+        totalProgress = 90
+      }
     }
 
     // Phase 6: Cleanup (10%)
