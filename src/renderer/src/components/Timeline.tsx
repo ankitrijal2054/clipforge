@@ -326,6 +326,7 @@ export const Timeline: React.FC = () => {
                     isSelected={selectedClipId === clip.id}
                     onSelect={() => selectTimelineClip(clip.id)}
                     pixelsPerSecond={pixelsPerSecond}
+                    trackType="video"
                   />
                 ))}
               </div>
@@ -353,6 +354,7 @@ export const Timeline: React.FC = () => {
                     isSelected={selectedClipId === clip.id}
                     onSelect={() => selectTimelineClip(clip.id)}
                     pixelsPerSecond={pixelsPerSecond}
+                    trackType="audio"
                   />
                 ))}
               </div>
