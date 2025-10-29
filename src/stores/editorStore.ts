@@ -86,6 +86,11 @@ export const useEditorStore = create<EditorStore>()(
           audio: false
         },
 
+        // Timeline export state (Phase 2D)
+        timelineIsExporting: false,
+        timelineExportProgress: 0,
+        timelineExportError: null as string | null,
+
         // Media management actions
         addClip: (clip: VideoClip) =>
           set((state) => ({
@@ -378,6 +383,20 @@ export const useEditorStore = create<EditorStore>()(
             timelineCurrentTime: Math.max(0, time)
           })),
         setTimelinePlaying: (isPlaying: boolean) => set(() => ({ timelineIsPlaying: isPlaying })),
+
+        // Timeline export actions (Phase 2D)
+        setTimelineExporting: (isExporting: boolean) =>
+          set(() => ({
+            timelineIsExporting: isExporting
+          })),
+        setTimelineExportProgress: (progress: number) =>
+          set(() => ({
+            timelineExportProgress: Math.max(0, Math.min(100, progress))
+          })),
+        setTimelineExportError: (error: string | null) =>
+          set(() => ({
+            timelineExportError: error
+          })),
 
         // Trim actions
         resetTrim: () =>

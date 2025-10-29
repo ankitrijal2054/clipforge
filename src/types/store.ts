@@ -37,6 +37,11 @@ export interface EditorStore extends TimelineState {
   exportProgress: number
   exportSettings: ExportSettings
 
+  // Timeline export (Phase 2D)
+  timelineIsExporting: boolean
+  timelineExportProgress: number
+  timelineExportError: string | null
+
   // UI State
   activeModal: string | null
   sidebarCollapsed: boolean
@@ -76,6 +81,11 @@ export interface EditorStore extends TimelineState {
   // Timeline playback controls (shared)
   setTimelineCurrentTime: (time: number) => void
   setTimelinePlaying: (isPlaying: boolean) => void
+
+  // Timeline export actions (Phase 2D)
+  setTimelineExporting: (isExporting: boolean) => void
+  setTimelineExportProgress: (progress: number) => void
+  setTimelineExportError: (error: string | null) => void
 
   // UI
   setActiveModal: (modal: string | null) => void
