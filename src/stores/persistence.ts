@@ -84,7 +84,7 @@ export const getDefaultPersistedState = (): Partial<PersistedState> => ({
   sidebarCollapsed: false,
   theme: 'dark',
   volume: 1,
-  isMuted: false
+  isMuted: { video: false, audio: false }
 })
 
 /**

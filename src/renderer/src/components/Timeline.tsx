@@ -18,7 +18,6 @@ const DEFAULT_PIXELS_PER_SECOND = 0.5 // At 100% zoom: 0.5 pixels per second (50
 const ZOOM_MIN = 0.1 // 10% zoom
 const ZOOM_MAX = 10 // 1000% zoom
 const ZOOM_STEP = 0.1
-const TIME_MARKER_INTERVAL_BASE = 300 // 5 minutes at default zoom
 const TRACK_HEADER_WIDTH = 160 // Width of track header in pixels
 
 /**
@@ -66,7 +65,9 @@ export const Timeline: React.FC = () => {
   const isMuted = useTimelineTrackMute()
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const playheadRef = useRef<HTMLDivElement>(null)
   const [playheadTime, setPlayheadTime] = useState(0)
+  const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false)
   const [dragOverTrack, setDragOverTrack] = useState<'video' | 'audio' | null>(null)
   const [zoomLevel, setZoomLevel] = useState(1) // 100% = 1x
 
@@ -91,7 +92,7 @@ export const Timeline: React.FC = () => {
   const timeMarkers = generateTimeMarkers(totalDuration, timeMarkerInterval)
 
   // Handle playhead click to seek
-  const handlePlayheadClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePlayheadAreaClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!scrollContainerRef.current) return
     const rect = scrollContainerRef.current.getBoundingClientRect()
     const clickX = e.clientX - rect.left + scrollContainerRef.current.scrollLeft
@@ -99,6 +100,50 @@ export const Timeline: React.FC = () => {
     const time = Math.max(0, timeX / pixelsPerSecond)
     setPlayheadTime(Math.max(0, Math.min(time, totalDuration)))
   }
+
+  // Handle playhead drag start
+  const handlePlayheadMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingPlayhead(true)
+  }
+
+  // Handle playhead drag
+  useEffect(() => {
+    if (!isDraggingPlayhead) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!scrollContainerRef.current) return
+      const rect = scrollContainerRef.current.getBoundingClientRect()
+      const clientX = e.clientX
+
+      // If dragging outside scroll container, use container bounds
+      let clickX: number
+      if (clientX < rect.left) {
+        clickX = 0
+      } else if (clientX > rect.right) {
+        clickX = scrollContainerRef.current.scrollWidth
+      } else {
+        clickX = clientX - rect.left + scrollContainerRef.current.scrollLeft
+      }
+
+      const timeX = clickX - TRACK_HEADER_WIDTH
+      const time = Math.max(0, timeX / pixelsPerSecond)
+      setPlayheadTime(Math.max(0, Math.min(time, totalDuration)))
+    }
+
+    const handleMouseUp = () => {
+      setIsDraggingPlayhead(false)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDraggingPlayhead, pixelsPerSecond, totalDuration])
 
   // Handle zoom in
   const handleZoomIn = () => {
@@ -173,6 +218,8 @@ export const Timeline: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedClipId, playheadTime])
 
+  const playheadPixelPosition = TRACK_HEADER_WIDTH + playheadTime * pixelsPerSecond
+
   return (
     <div className="timeline-container">
       {/* Zoom Controls and Info */}
@@ -198,13 +245,19 @@ export const Timeline: React.FC = () => {
         </div>
         <div className="timeline-info">
           <span className="info-label">
-            Tip: Ctrl+Scroll to zoom • Drag clips to timeline • S to split, Delete to remove
+            Playhead: {formatTime(playheadTime)} | Tip: Ctrl+Scroll to zoom • Drag clips to timeline
+            • S to split, Delete to remove
           </span>
         </div>
       </div>
 
       {/* UNIFIED Scroll Container for Header and Tracks */}
-      <div className="timeline-scroll-container" ref={scrollContainerRef} onWheel={handleWheel}>
+      <div
+        className="timeline-scroll-container"
+        ref={scrollContainerRef}
+        onWheel={handleWheel}
+        onClick={handlePlayheadAreaClick}
+      >
         {/* Header with Time Markers */}
         <div className="timeline-header-row" style={{ width: `${timelineWidth}px` }}>
           <div className="header-spacer" style={{ width: `${TRACK_HEADER_WIDTH}px` }} />
@@ -222,8 +275,30 @@ export const Timeline: React.FC = () => {
           </div>
         </div>
 
+        {/* Playhead - Positioned absolutely in scroll container, starts at header top */}
+        <div
+          ref={playheadRef}
+          className="playhead-container"
+          style={{
+            position: 'absolute',
+            left: `${playheadPixelPosition}px`,
+            top: 0,
+            height: '100%',
+            width: '2px',
+            pointerEvents: 'auto',
+            zIndex: 10
+          }}
+          onMouseDown={handlePlayheadMouseDown}
+        >
+          <div className="playhead-line" />
+          <div className="playhead-time">{formatTime(playheadTime)}</div>
+        </div>
+
         {/* Tracks Container */}
-        <div className="tracks-container" style={{ width: `${timelineWidth}px` }}>
+        <div
+          className="tracks-container"
+          style={{ width: `${timelineWidth}px`, position: 'relative' }}
+        >
           {/* Video Track */}
           <div className="track-section">
             <TrackHeader
@@ -277,21 +352,6 @@ export const Timeline: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Playhead - Positioned relative to scroll container */}
-      <div className="playhead-wrapper" ref={scrollContainerRef}>
-        <div
-          className="playhead"
-          style={{
-            left: `${TRACK_HEADER_WIDTH + playheadTime * pixelsPerSecond}px`,
-            height: '100%'
-          }}
-          onClick={handlePlayheadClick}
-        >
-          <div className="playhead-line" />
-          <div className="playhead-time">{formatTime(playheadTime)}</div>
         </div>
       </div>
     </div>

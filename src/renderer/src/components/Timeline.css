@@ -185,28 +185,13 @@
   height: 100%;
 }
 
-/* Playhead Wrapper - Fixed positioning over scroll area */
-.playhead-wrapper {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  pointer-events: none;
-  z-index: 20;
-}
-
-.playhead {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 100%;
+/* Playhead Container - Absolutely positioned inside scroll container, overlays all content */
+.playhead-container {
   background-color: #ef4444;
-  pointer-events: auto;
   cursor: grab;
 }
 
-.playhead:active {
+.playhead-container:active {
   cursor: grabbing;
 }
 
