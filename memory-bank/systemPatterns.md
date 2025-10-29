@@ -662,6 +662,39 @@ const exportTimeline = async (params: MultiClipExportParams): Promise<string> =>
 }
 ```
 
+#### 4.1 Updated Mixing Pattern (External Audio + Mute Handling)
+
+```typescript
+// After concatenating video segments, use FFprobe duration for exact alignment
+const videoDurationSec = await getVideoDuration(videoConcatPath)
+
+// Mix with explicit stream mapping and silence padding
+ffmpeg([
+  '-i',
+  videoConcatPath,
+  '-i',
+  audioConcatPath,
+  '-filter_complex',
+  '[1:a]apad,atrim=0:' + videoDurationSec + ',asetpts=PTS-STARTPTS[aud]',
+  '-map',
+  '0:v:0',
+  '-map',
+  '[aud]',
+  '-c:v',
+  'copy',
+  '-c:a',
+  'aac',
+  '-b:a',
+  '192k',
+  '-avoid_negative_ts',
+  'make_zero',
+  outputPath
+])
+
+// If video is muted and no external audio: strip audio
+ffmpeg(['-i', videoConcatPath, '-c:v', 'copy', '-an', outputPath])
+```
+
 ## Key Design Principles
 
 1. **Separation of Concerns**: Clear boundaries between main/renderer processes

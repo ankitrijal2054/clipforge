@@ -160,7 +160,7 @@
 - ✅ **Professional UI**: Dark theme with custom ClipForge branding
 - ✅ **Real-time Preview**: High-quality video playback with controls
 - ✅ **Precise Trimming**: Frame-accurate start/end point selection
-- ✅ **Export System**: Multiple formats with progress tracking
+- ✅ **Export System**: Multiple formats with progress tracking; multi-clip concat; external audio overlay with precise duration match; mute-aware exporting
 - ✅ **Responsive Design**: Adapts to all screen sizes
 - ✅ **Keyboard Shortcuts**: Efficient editing workflow
 - ✅ **Drag & Drop**: Easy video file import
@@ -278,10 +278,14 @@
 
 ### Phase 2D: Export Pipeline (Tasks 107-132)
 
-- 🔄 **FFmpeg Integration**: Multi-clip concatenation with trimming
-- 🔄 **Export UI**: Updated modal for multi-clip exports
-- 🔄 **File Management**: Temp file cleanup and export validation
-- 🔄 **Testing**: Multi-clip export across all formats and platforms
+- [x] **FFmpeg Integration**: Multi-clip concatenation with trimming (concat demuxer)
+- [x] **External Audio Overlay**: WAV extraction/concat; explicit stream mapping; silence padding with `apad`; trim with `atrim`
+- [x] **Mute Handling**: Respect video/audio track mute (strip audio with `-an` when needed)
+- [x] **Accurate Duration**: FFprobe-based duration used for exact A/V alignment
+- [x] **Export UI**: Updated modal for timeline exports; progress and error events wired
+- [x] **UX Polish**: Disable controls during export; enable export for timeline-only; reset save location on open
+- [x] **File Management**: Temp directory per export; full cleanup
+- [x] **Testing**: Verified multi-clip export with muted video + external audio (no truncation)
 
 ### Phase 2E: Polish & Testing (Tasks 133-167)
 

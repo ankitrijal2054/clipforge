@@ -1,10 +1,11 @@
 # ClipForge Active Context
 
-## Current Status: Phase 2C - Multi-Clip Playback COMPLETE ✅ (Tasks 66-88)
+## Current Status: Phase 2D - Export Pipeline COMPLETE ✅ (Tasks 107-132)
 
 **Phase 2A Status:** ✅ 100% Complete - Recording System  
 **Phase 2B Status:** ✅ 100% Complete - Multi-Clip Timeline UI & Drag-Drop  
 **Phase 2C Status:** ✅ 100% Complete - Multi-Clip Sequential Playback
+**Phase 2D Status:** ✅ 100% Complete - Multi-Clip Export Pipeline
 
 ## Phase 2C: Multi-Clip Playback - COMPLETE ✅
 
@@ -225,19 +226,47 @@ if (isTimelineMode) {
   - Test mute buttons for both tracks
   - Verify single-clip mode still works
 
-### Phase 2D: Export Pipeline (Ready to Start)
+## Phase 2D: Export Pipeline - COMPLETE ✅
 
-- Update export logic to concatenate timeline clips
-- Handle mute settings in export
-- Support multi-clip export with trim boundaries
-- FFmpeg concat demuxer integration
+### Implementation Summary (Tasks 107-132)
+
+- Multi-clip export using FFmpeg concat demuxer
+- Video segments extracted with stream copy and concatenated preserving original quality
+- External audio support with robust pipeline:
+  - Audio segments extracted as 48kHz stereo WAV
+  - WAV segments concatenated via demuxer
+  - Mixed with concatenated video using explicit stream mapping
+  - Silence padding + trim to match exact video duration using `apad, atrim, asetpts`
+- Mute handling in export:
+  - Video muted → audio stripped with `-an`
+  - Audio track muted → keep video’s embedded audio as-is
+- Accurate duration alignment using FFprobe to compute concatenated video duration for mixing
+- Export progress and errors wired through IPC to modal UI
+- UX polish: Export button disabled during export; save location resets on modal open; export enabled when timeline has clips
+
+### Files Created/Modified in Phase 2D
+
+- `src/main/ffmpeg/concat.ts` — New export pipeline (extract, concat, mix, cleanup)
+- `src/main/ipc/exportHandlers.ts` — Timeline export handler (`timeline:export`) and progress events
+- `src/preload/index.ts` — Exposed `timelineExport`, `onTimelineExportProgress`, `onTimelineExportError`
+- `src/components/ExportModal.tsx` — Timeline mode, progress wiring, disabled controls during export, reset save location
+- `src/renderer/src/components/Layout.tsx` — Export button enabled for timeline-only scenarios
+- `src/stores/editorStore.ts` — Timeline export progress state and actions
+
+### Acceptance Criteria (Met)
+
+- ✅ Concatenates timeline clips with trim boundaries
+- ✅ Respects track mute settings in export
+- ✅ Supports external audio overlay with exact length match
+- ✅ Real-time progress in modal UI
+- ✅ Temp files cleaned up after export
 
 ## Current Status Summary
 
-✅ **Phase 2C:** 100% Complete - Multi-clip sequential playback fully implemented and integrated
+✅ **Phase 2C:** 100% Complete - Multi-clip sequential playback implemented
+✅ **Phase 2D:** 100% Complete - Multi-clip export implemented with external audio + mute fixes
 ✅ **Code Quality:** All TypeScript, no ESLint errors
-✅ **Ready for Testing:** Manual testing phase can begin immediately
-🔄 **Phase 2D:** Ready to start - Export pipeline implementation
+✅ **Testing:** Manual verification confirms duration alignment and mute behavior
 
 ## Development Environment
 
