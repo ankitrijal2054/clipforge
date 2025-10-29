@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Download, Mic } from 'lucide-react'
+import { Download, Mic, X } from 'lucide-react'
 import { useState } from 'react'
 import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
@@ -14,125 +14,93 @@ import { useEditorStore } from '../../../stores/editorStore'
  * Layout component for the main application interface
  *
  * Features:
- * - Responsive layout with sidebar
- * - Sidebar with media library and recording panel
- * - Main content area with video preview
- * - Timeline component below preview
- * - Smooth transitions
- * - Proper responsive spacing ensuring nothing goes out of bounds
+ * - Left sidebar: Import Manager and Media Library
+ * - Main content area: Video Preview and Timeline
+ * - Right sidebar: Collapsible Recording section (hidden by default)
+ * - Modern ribbon toggle button for quick record access
+ * - Responsive layout ensuring nothing goes out of bounds
  */
-export function Layout() {
+export function Layout(): React.ReactElement {
   const { clips } = useEditorStore()
-  const selectedClip = useEditorStore((state) => state.selectedClip)
   const timelineVideoClips = useEditorStore((state) => state.timelineVideoClips)
-  const timelineAudioClips = useEditorStore((state) => state.timelineAudioClips)
   const setActiveModal = useEditorStore((state) => state.setActiveModal)
-  const [sidebarTab, setSidebarTab] = useState<'library' | 'recording'>('library')
+  const [isPreviewFullscreen, setIsPreviewFullscreen] = useState(false)
+  const [isQuickRecordOpen, setIsQuickRecordOpen] = useState(false)
 
   return (
     <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
-      {/* Sidebar - fixed width, scrollable */}
-      <motion.div
-        className="w-80 bg-gray-800/95 backdrop-blur-sm border-r border-gray-700 flex flex-col shadow-xl overflow-hidden"
-        initial={{ x: -320 }}
-        animate={{ x: 0 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-      >
-        <div className="p-6 border-b border-gray-700 flex-shrink-0">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="w-16 h-16 rounded-lg flex items-center justify-center overflow-hidden">
-              <img
-                src="./assets/icon.png"
-                alt="ClipForge"
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  // Fallback to gradient if icon fails to load
-                  const target = e.target as HTMLImageElement
-                  target.style.display = 'none'
-                  const parent = target.parentElement
-                  if (parent) {
-                    parent.innerHTML =
-                      '<div class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-lg">C</span></div>'
-                  }
-                }}
-              />
+      {/* LEFT SIDEBAR - Import Manager and Library */}
+      {!isPreviewFullscreen && (
+        <motion.div
+          className="w-64 bg-gray-800/95 backdrop-blur-sm border-r border-gray-700 flex flex-col shadow-xl overflow-hidden"
+          initial={{ x: -256 }}
+          animate={{ x: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+          {/* Header */}
+          <div className="p-2 border-b border-gray-700 flex-shrink-0">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="w-16 h-16 rounded-lg flex items-center justify-center overflow-hidden">
+                <img
+                  src="./assets/icon.png"
+                  alt="ClipForge"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                    const parent = target.parentElement
+                    if (parent) {
+                      parent.innerHTML =
+                        '<div class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-lg">C</span></div>'
+                    }
+                  }}
+                />
+              </div>
+              <h1 className="text-xl font-bold text-white">ClipForge</h1>
             </div>
-            <h1 className="text-xl font-bold text-white">ClipForge</h1>
           </div>
-          <p className="text-sm text-gray-400">Professional Video Trimming</p>
-        </div>
 
-        {/* Import Manager - at the top */}
-        <div className="px-4 py-3 border-b border-gray-700 flex-shrink-0">
-          <ImportManager />
-        </div>
+          {/* Import Manager - at the top */}
+          <div className="px-3 py-2 border-b border-gray-700 flex-shrink-0">
+            <ImportManager />
+          </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 p-4 border-b border-gray-700 flex-shrink-0">
-          <button
-            onClick={() => setSidebarTab('library')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors ${
-              sidebarTab === 'library'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            Library
-          </button>
-          <button
-            onClick={() => setSidebarTab('recording')}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
-              sidebarTab === 'recording'
-                ? 'bg-red-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            <Mic className="w-3 h-3" />
-            Record
-          </button>
-        </div>
-
-        {/* Sidebar Content - scrollable if needed */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          {sidebarTab === 'recording' ? (
-            <div className="p-4 h-full overflow-y-auto">
-              <RecordingPanel />
-            </div>
-          ) : clips.length === 0 ? (
-            <div className="p-4">{/* ImportManager already shown at top */}</div>
-          ) : (
-            <div className="p-4 h-full flex flex-col">
-              <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Media Library - scrollable */}
+          {clips.length > 0 && (
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="p-4">
                 <MediaLibrary />
               </div>
             </div>
           )}
-        </div>
 
-        {/* Export Button - fixed at bottom */}
-        {clips.length > 0 && (
-          <motion.div
-            className="flex-shrink-0 px-4 py-3 border-t border-gray-700"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Button
-              onClick={() => setActiveModal('export')}
-              disabled={
-                !selectedClip && timelineVideoClips.length === 0 && timelineAudioClips.length === 0
-              }
-              className="w-full text-xs py-1.5"
+          {/* Export Button - fixed at bottom */}
+          {clips.length > 0 && (
+            <motion.div
+              className="flex-shrink-0 px-4 py-3 border-t border-gray-700"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
             >
-              <Download className="w-3 h-3 mr-2" />
-              Export
-            </Button>
-          </motion.div>
-        )}
-      </motion.div>
+              <Button
+                onClick={() => setActiveModal('export')}
+                disabled={timelineVideoClips.length === 0}
+                className="w-full text-xs py-1.5"
+              >
+                <Download className="w-3 h-3 mr-2" />
+                Export
+              </Button>
+            </motion.div>
+          )}
+        </motion.div>
+      )}
 
-      {/* Main Content Area - flex column that fills remaining space */}
-      <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
+      {/* MAIN CONTENT AREA - Preview and Timeline */}
+      <div
+        className={`flex-1 flex flex-col ${
+          isPreviewFullscreen ? 'overflow-hidden' : 'bg-gray-900 overflow-hidden p-4 gap-3'
+        }`}
+      >
         {clips.length === 0 ? (
           // Welcome state
           <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
@@ -148,7 +116,6 @@ export function Layout() {
                   alt="ClipForge"
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    // Fallback to gradient if icon fails to load
                     const target = e.target as HTMLImageElement
                     target.style.display = 'none'
                     const parent = target.parentElement
@@ -169,11 +136,11 @@ export function Layout() {
                 <div className="space-y-3 text-gray-400">
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Click "Record" tab to start recording video</span>
+                    <span>Use the right panel to start recording video</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Or click "Library" to import existing videos</span>
+                    <span>Or use the left panel to import existing videos</span>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -185,29 +152,79 @@ export function Layout() {
           </div>
         ) : (
           // Main editing view with video and timeline
-          <div className="flex-1 flex flex-col overflow-hidden p-4 gap-3">
-            {/* Video Preview - takes priority space */}
+          <>
+            {/* Video Preview */}
             <motion.div
-              className="flex-1 min-h-0"
+              className={
+                isPreviewFullscreen
+                  ? 'w-screen h-screen fixed inset-0 bg-black z-50'
+                  : 'flex-1 min-h-0'
+              }
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <PreviewPlayer />
+              <PreviewPlayer
+                isFullscreen={isPreviewFullscreen}
+                onFullscreenChange={setIsPreviewFullscreen}
+              />
             </motion.div>
 
-            {/* Timeline - fixed height, responsive width */}
-            <motion.div
-              className="flex-shrink-0"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <Timeline />
-            </motion.div>
-          </div>
+            {/* Timeline - hidden in fullscreen mode */}
+            {!isPreviewFullscreen && (
+              <motion.div
+                className="flex-shrink-0"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
+                <Timeline />
+              </motion.div>
+            )}
+          </>
         )}
       </div>
+
+      {/* RIGHT SIDEBAR - Collapsible Recording Section */}
+      {!isPreviewFullscreen && isQuickRecordOpen && (
+        <motion.div
+          className="w-64 bg-gray-800/95 backdrop-blur-sm border-l border-gray-700 flex flex-col shadow-xl overflow-hidden"
+          initial={{ x: 256 }}
+          animate={{ x: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+          <div className="flex items-center justify-between p-3 border-b border-gray-700 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <Mic size={18} className="text-red-400" />
+              <span className="text-sm font-semibold">Quick Record</span>
+            </div>
+            <button
+              onClick={() => setIsQuickRecordOpen(false)}
+              className="p-1 hover:bg-gray-700 rounded transition-colors"
+              title="Close quick record"
+            >
+              <X size={16} className="text-gray-400 hover:text-white" />
+            </button>
+          </div>
+          <RecordingPanel />
+        </motion.div>
+      )}
+
+      {/* QUICK RECORD TOGGLE BUTTON - Modern Ribbon Style */}
+      {!isPreviewFullscreen && !isQuickRecordOpen && (
+        <motion.button
+          onClick={() => setIsQuickRecordOpen(true)}
+          className="fixed top-4 right-4 z-40 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 font-medium text-sm"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Mic size={16} />
+          Quick Record
+        </motion.button>
+      )}
 
       {/* Export Modal - floats above all content */}
       <ExportModal />

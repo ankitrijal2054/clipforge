@@ -28,6 +28,11 @@ function getVideoSrc(filePath: string): string {
   return `clipforge://${encodeURI(pathNoLeadingScheme)}`
 }
 
+interface PreviewPlayerProps {
+  isFullscreen?: boolean
+  onFullscreenChange?: (isFullscreen: boolean) => void
+}
+
 /**
  * PreviewPlayer component supporting both single-clip and multi-clip playback
  *
@@ -39,7 +44,7 @@ function getVideoSrc(filePath: string): string {
  * - Mute state for both video and audio tracks
  * - HTML5 video player with custom controls
  */
-export function PreviewPlayer() {
+export function PreviewPlayer({ onFullscreenChange }: PreviewPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
@@ -119,17 +124,11 @@ export function PreviewPlayer() {
 
   // Handle fullscreen toggle
   const toggleFullscreen = () => {
-    if (!containerRef.current) return
-
-    if (!isFullscreen) {
-      if (containerRef.current.requestFullscreen) {
-        containerRef.current.requestFullscreen()
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen()
-      }
-    }
+    console.log('🔍 toggleFullscreen called')
+    const newFullscreenState = !isFullscreen
+    setIsFullscreen(newFullscreenState)
+    onFullscreenChange?.(newFullscreenState)
+    console.log('✅ Fullscreen toggled:', newFullscreenState)
   }
 
   // Handle fullscreen change events
@@ -181,20 +180,21 @@ export function PreviewPlayer() {
   const playheadPercent = displayDuration > 0 ? (displayCurrentTime / displayDuration) * 100 : 0
 
   // Determine what to display
-  if (!selectedClip && !isTimelineMode) {
+  if (!isTimelineMode) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-900 rounded-xl border border-gray-700">
         <div className="text-center max-w-md">
           <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
             <Play className="w-10 h-10 text-white" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">No Video Selected</h3>
+          <h3 className="text-xl font-semibold text-white mb-2">Add Video to Timeline</h3>
           <p className="text-gray-400 mb-4">
-            Choose a video from the media library to start previewing and editing
+            Start editing by dragging videos from the media library to the timeline
           </p>
           <div className="text-sm text-gray-500">
-            <p>• Import videos using drag & drop</p>
-            <p>• Select from the sidebar to preview</p>
+            <p>• Select videos from the library sidebar</p>
+            <p>• Drag them to the timeline below</p>
+            <p>• Preview will appear here</p>
           </div>
         </div>
       </div>

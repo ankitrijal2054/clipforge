@@ -47,13 +47,16 @@ const api = {
   },
 
   // File dialog operations (video or audio)
-  selectVideoFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectVideo'),
+  selectVideoFile: (): Promise<string[] | null> => ipcRenderer.invoke('dialog:selectVideo'),
 
   selectExportPath: (defaultFilename: string): Promise<string | null> =>
     ipcRenderer.invoke('dialog:selectExportPath', defaultFilename),
 
   openFolder: (folderPath: string): Promise<void> =>
     ipcRenderer.invoke('dialog:openFolder', folderPath),
+
+  // Window fullscreen control
+  toggleFullscreen: (): Promise<void> => ipcRenderer.invoke('window:toggleFullscreen'),
 
   // Recording operations
   getScreenSources: (): Promise<ScreenSource[]> => ipcRenderer.invoke('recording:getSources'),

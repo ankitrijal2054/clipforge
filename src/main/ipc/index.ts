@@ -5,6 +5,7 @@
  * the main process and renderer process.
  */
 
+import { BrowserWindow } from 'electron'
 import { registerVideoHandlers } from './videoHandlers'
 import { registerExportHandlers } from './exportHandlers'
 import './recordingHandlers' // Import to register handlers
@@ -12,8 +13,8 @@ import './recordingHandlers' // Import to register handlers
 /**
  * Register all IPC handlers
  */
-export function registerIpcHandlers(): void {
-  registerVideoHandlers()
+export function registerIpcHandlers(mainWindow: BrowserWindow): void {
+  registerVideoHandlers(mainWindow)
   registerExportHandlers()
   // Recording handlers are already registered via ipcMain.handle() calls in recordingHandlers.ts
   console.log('Recording IPC handlers registered')

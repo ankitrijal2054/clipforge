@@ -35,9 +35,12 @@ declare global {
       onConvertProgress: (callback: (progress: ExportProgress) => void) => () => void
 
       // File dialog operations
-      selectVideoFile: () => Promise<string | null>
+      selectVideoFile: () => Promise<string[] | null>
       selectExportPath: (defaultFilename: string) => Promise<string | null>
       openFolder: (folderPath: string) => Promise<void>
+
+      // Window fullscreen control
+      toggleFullscreen: () => Promise<void>
 
       // Recording operations
       getScreenSources: () => Promise<ScreenSource[]>

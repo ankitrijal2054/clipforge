@@ -189,6 +189,7 @@
 .playhead-container {
   background-color: #ef4444;
   cursor: grab;
+  z-index: 50;
 }
 
 .playhead-container:active {
@@ -200,6 +201,29 @@
   height: 100%;
   background-color: #ef4444;
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.playhead-handle {
+  position: absolute;
+  top: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  background-color: #ef4444;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.6);
+  cursor: grab;
+  z-index: 1;
+  transition: all 0.2s ease;
+}
+
+.playhead-handle:hover {
+  width: 14px;
+  height: 14px;
+  top: 0px;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.8);
 }
 
 .playhead-time {
