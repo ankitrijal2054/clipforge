@@ -19,7 +19,7 @@ const DEFAULT_PIXELS_PER_SECOND = 0.5 // At 100% zoom: 0.5 pixels per second (50
 const ZOOM_MIN = 0.1 // 10% zoom
 const ZOOM_MAX = 10 // 1000% zoom
 const ZOOM_STEP = 0.1
-const TRACK_HEADER_WIDTH = 160 // Width of track header in pixels
+const TRACK_HEADER_WIDTH = 110 // Width of track header in pixels
 
 /**
  * Helper to format time as HH:MM:SS

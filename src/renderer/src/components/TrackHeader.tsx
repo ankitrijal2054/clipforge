@@ -1,5 +1,5 @@
 import React from 'react'
-import { Volume2, VolumeX } from 'lucide-react'
+import { Volume2, VolumeX, Film, Music } from 'lucide-react'
 import './TrackHeader.css'
 
 interface TrackHeaderProps {
@@ -10,22 +10,28 @@ interface TrackHeaderProps {
 
 /**
  * TrackHeader Component
- * Displays track label and mute button
+ * Displays track icon and mute button
  */
 export const TrackHeader: React.FC<TrackHeaderProps> = ({ trackType, isMuted, onToggleMute }) => {
-  const label = trackType === 'video' ? '🎬 Video Track' : '🎵 Audio Track'
-  const trackColor = trackType === 'video' ? 'text-blue-400' : 'text-amber-400'
+  const Icon = trackType === 'video' ? Film : Music
+  const trackTitle = trackType === 'video' ? 'Video Track' : 'Audio Track'
 
   return (
     <div className="track-header">
-      <div className={`track-label ${trackColor}`}>{label}</div>
+      <button
+        className={`track-icon-button ${trackType}`}
+        title={trackTitle}
+        aria-label={trackTitle}
+      >
+        <Icon size={40} />
+      </button>
       <button
         className={`mute-button ${isMuted ? 'muted' : ''}`}
         onClick={onToggleMute}
         title={isMuted ? 'Unmute track' : 'Mute track'}
         aria-label={`${isMuted ? 'Unmute' : 'Mute'} ${trackType} track`}
       >
-        {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+        {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
       </button>
     </div>
   )

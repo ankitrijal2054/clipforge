@@ -1,41 +1,72 @@
 .track-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  width: 160px;
-  min-width: 160px;
+  justify-content: center;
+  padding: 4px 6px;
+  width: 110px;
+  min-width: 110px;
   background-color: #111827;
   border: 1px solid #374151;
   border-radius: 4px;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
-.track-label {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
+.track-icon-button {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.track-icon-button:hover {
+  background-color: #374151;
+  color: #d1d5db;
+}
+
+.track-icon-button.video {
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.track-icon-button.video:hover {
+  background-color: #1e40af;
+  color: #93c5fd;
+}
+
+.track-icon-button.audio {
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+.track-icon-button.audio:hover {
+  background-color: #92400e;
+  color: #fcd34d;
 }
 
 .mute-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background-color: #1f2937;
   border: 1px solid #374151;
-  border-radius: 4px;
+  border-radius: 3px;
   cursor: pointer;
   color: #9ca3af;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  padding: 0;
 }
 
 .mute-button:hover {
