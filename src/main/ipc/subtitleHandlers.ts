@@ -193,7 +193,7 @@ export function registerSubtitleHandlers(): void {
               combinedText += ' ' + resp.text
             }
 
-            whisperResponse = { text: combinedText.trim(), segments: allSegments }
+            whisperResponse = { text: combinedText.trim(), segments: allSegments, language: 'en' }
           } else {
             onProgress(30, 'Transcribing with Whisper...')
             whisperResponse = await callWhisperAPI(compressedPath, apiKey, onProgress)

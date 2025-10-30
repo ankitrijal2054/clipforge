@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Download, Mic, X, Key, Zap } from 'lucide-react'
+import { Download, Mic, X, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
@@ -7,12 +7,11 @@ import { RecordingPanel } from './recording/RecordingPanel'
 import { PreviewPlayer } from './PreviewPlayer'
 import { Timeline } from './Timeline'
 import { ExportModal } from '../../../components/ExportModal'
-import { AISettings } from './AISettings'
-import { SubtitlesPanel } from './SubtitlesPanel'
+import { AISubsPanel } from './AISubsPanel'
 import { Button } from '../../../components/ui/button'
 import { useEditorStore } from '../../../stores/editorStore'
 
-type RightPanelTab = 'record' | 'ai-settings' | 'subtitles'
+type RightPanelTab = 'record' | 'ai-subs'
 
 /**
  * Layout component for the main application interface
@@ -208,38 +207,24 @@ export function Layout(): React.ReactElement {
                     ? 'bg-red-500/20 border-b-2 border-red-500 text-red-400'
                     : 'text-gray-400 hover:text-gray-300'
                 }`}
-                title="Quick Record"
+                title="Recording Options"
               >
                 <Mic size={14} />
                 Record
               </button>
 
-              {/* AI Settings Tab */}
+              {/* AI Subs Tab */}
               <button
-                onClick={() => setActiveTab('ai-settings')}
+                onClick={() => setActiveTab('ai-subs')}
                 className={`px-2.5 py-1.5 rounded-t text-xs font-medium transition-all flex items-center gap-1 ${
-                  activeTab === 'ai-settings'
-                    ? 'bg-blue-500/20 border-b-2 border-blue-500 text-blue-400'
+                  activeTab === 'ai-subs'
+                    ? 'bg-purple-500/20 border-b-2 border-purple-500 text-purple-400'
                     : 'text-gray-400 hover:text-gray-300'
                 }`}
-                title="AI Settings"
+                title="AI Subtitles"
               >
-                <Key size={14} />
-                AI
-              </button>
-
-              {/* Subtitles Tab */}
-              <button
-                onClick={() => setActiveTab('subtitles')}
-                className={`px-2.5 py-1.5 rounded-t text-xs font-medium transition-all flex items-center gap-1 ${
-                  activeTab === 'subtitles'
-                    ? 'bg-yellow-500/20 border-b-2 border-yellow-500 text-yellow-400'
-                    : 'text-gray-400 hover:text-gray-300'
-                }`}
-                title="Generate Subtitles"
-              >
-                <Zap size={14} />
-                Subs
+                <Sparkles size={14} />
+                AI Subs
               </button>
             </div>
 
@@ -256,8 +241,7 @@ export function Layout(): React.ReactElement {
           {/* Tab Content */}
           <div className="flex-1 min-h-0 overflow-hidden">
             {activeTab === 'record' && <RecordingPanel />}
-            {activeTab === 'ai-settings' && <AISettings />}
-            {activeTab === 'subtitles' && <SubtitlesPanel />}
+            {activeTab === 'ai-subs' && <AISubsPanel />}
           </div>
         </motion.div>
       )}
@@ -276,8 +260,7 @@ export function Layout(): React.ReactElement {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <Mic size={16} />
-          Quick Record
+          Quick Options
         </motion.button>
       )}
 
