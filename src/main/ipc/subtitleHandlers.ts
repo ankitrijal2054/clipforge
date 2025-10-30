@@ -3,9 +3,11 @@
  * Handles OpenAI Whisper API calls for subtitle generation
  */
 
-import { ipcMain } from 'electron'
+import { ipcMain, BrowserWindow } from 'electron'
 import fs from 'fs'
 import FormData from 'form-data'
+import axios from 'axios'
+import https from 'https'
 import { extractAudioFromClip, cleanupAudioFile } from '../ffmpeg/audioExtraction'
 import type { Subtitle, WhisperResponse } from '../../types/subtitles'
 
@@ -13,6 +15,17 @@ import type { Subtitle, WhisperResponse } from '../../types/subtitles'
  * Convert Whisper response to subtitle array with SRT formatting
  */
 function convertWhisperToSubtitles(whisperResponse: WhisperResponse): Subtitle[] {
+  if (!whisperResponse.segments) {
+    return [
+      {
+        index: 1,
+        startTime: '00:00:00,000',
+        endTime: '00:00:00,000',
+        text: whisperResponse.text || '(no segments found)'
+      }
+    ]
+  }
+
   return whisperResponse.segments.map((segment, index) => ({
     index: index + 1,
     startTime: formatTimeToSRT(segment.start),
@@ -30,11 +43,14 @@ function formatTimeToSRT(seconds: number): string {
   const secs = Math.floor(seconds % 60)
   const milliseconds = Math.round((seconds % 1) * 1000)
 
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')},${String(milliseconds).padStart(3, '0')}`
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(
+    secs
+  ).padStart(2, '0')},${String(milliseconds).padStart(3, '0')}`
 }
 
 /**
  * Send audio file to OpenAI Whisper API and get transcription
+ * Uses Axios with https.Agent + retries to prevent SSL issues
  */
 async function callWhisperAPI(
   audioPath: string,
@@ -44,38 +60,53 @@ async function callWhisperAPI(
   onProgress(50, 'Uploading to OpenAI...')
 
   const form = new FormData()
-
-  // Read file as buffer instead of stream for better compatibility
-  const fileBuffer = fs.readFileSync(audioPath)
-  form.append('file', fileBuffer, {
-    filename: 'audio.wav'
-  })
+  form.append('file', fs.createReadStream(audioPath))
   form.append('model', 'whisper-1')
   form.append('language', 'en')
+  form.append('response_format', 'verbose_json')
 
-  try {
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        ...form.getHeaders()
-      },
-      body: form as any
-    })
+  const agent = new https.Agent({ keepAlive: false, maxSockets: 1 })
 
-    if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`OpenAI API error (${response.status}): ${error}`)
+  // Retry logic for transient SSL or 502 errors
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await axios.post('https://api.openai.com/v1/audio/transcriptions', form, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          ...form.getHeaders()
+        },
+        httpsAgent: agent,
+        maxBodyLength: Infinity,
+        timeout: 90000, // 90 seconds
+        validateStatus: () => true
+      })
+
+      if (!response.data || response.status >= 400) {
+        throw new Error(
+          `OpenAI API error (${response.status}): ${JSON.stringify(response.data, null, 2)}`
+        )
+      }
+
+      onProgress(80, 'Processing transcription...')
+      return response.data as WhisperResponse
+    } catch (err) {
+      const msg = String(err)
+      if (
+        msg.includes('SSLV3_ALERT_BAD_RECORD_MAC') ||
+        msg.includes('ECONNRESET') ||
+        msg.includes('502') ||
+        msg.includes('network')
+      ) {
+        console.warn(`Whisper upload attempt ${attempt} failed — retrying...`)
+        await new Promise((r) => setTimeout(r, attempt * 2000))
+        continue
+      }
+      console.error('Whisper API call failed:', err)
+      throw new Error(err instanceof Error ? err.message : 'Failed to call Whisper API')
     }
-
-    onProgress(80, 'Processing transcription...')
-    return (await response.json()) as WhisperResponse
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error
-    }
-    throw new Error('Failed to call Whisper API')
   }
+
+  throw new Error('Whisper upload failed after 3 retries')
 }
 
 /**
@@ -106,8 +137,7 @@ export function registerSubtitleHandlers(): void {
 
         // Step 1: Extract audio
         const onProgress = (progress: number, phase: string) => {
-          // Emit progress through main window
-          const mainWindow = require('electron').BrowserWindow.getFocusedWindow()
+          const mainWindow = BrowserWindow.getFocusedWindow()
           if (mainWindow) {
             mainWindow.webContents.send('subtitle:progress', { progress, phase })
           }
@@ -133,7 +163,7 @@ export function registerSubtitleHandlers(): void {
             text: whisperResponse.text
           }
         } finally {
-          // Clean up audio file
+          // Clean up temp audio file
           await cleanupAudioFile(audioPath)
         }
       } catch (error) {
@@ -163,7 +193,7 @@ export function subtitlesToSRT(subtitles: Subtitle[]): string {
 export function subtitlesToVTT(subtitles: Subtitle[]): string {
   const vttSubtitles = subtitles.map((s) => ({
     ...s,
-    startTime: s.startTime.replace(',', '.'), // VTT uses . instead of ,
+    startTime: s.startTime.replace(',', '.'),
     endTime: s.endTime.replace(',', '.')
   }))
 
