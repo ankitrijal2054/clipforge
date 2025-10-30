@@ -10,7 +10,8 @@ import {
   ChevronUp,
   Key,
   Eye,
-  EyeOff
+  EyeOff,
+  Trash2
 } from 'lucide-react'
 import type { Subtitle } from '../../../types/subtitles'
 
@@ -32,7 +33,8 @@ export const AISubsPanel: React.FC<AISubsPanelProps> = ({ onSubtitlesGenerated }
     subtitleError,
     setGeneratingSubtitles,
     setSubtitleError,
-    setSubtitles
+    setSubtitles,
+    clearSubtitles
   } = useEditorStore()
 
   const [apiKey, setApiKey] = useState<string>('')
@@ -393,13 +395,23 @@ export const AISubsPanel: React.FC<AISubsPanelProps> = ({ onSubtitlesGenerated }
         </Button>
 
         {currentSubtitles && currentSubtitles.length > 0 && !isGeneratingSubtitles && (
-          <Button
-            onClick={handleDownloadSRT}
-            className="w-full bg-green-600 hover:bg-green-700 text-white h-9 text-sm gap-2"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Download SRT
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleDownloadSRT}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white h-9 text-sm gap-2"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Download
+            </Button>
+            <Button
+              onClick={clearSubtitles}
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white h-9 text-sm gap-2"
+              title="Clear subtitles"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear
+            </Button>
+          </div>
         )}
       </div>
     </div>
