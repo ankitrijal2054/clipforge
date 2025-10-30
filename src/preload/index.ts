@@ -29,6 +29,10 @@ const api = {
   trimExport: (params: TrimExportParams): Promise<string> =>
     ipcRenderer.invoke('video:trimExport', params),
 
+  // Video trimming and export with subtitle burning
+  trimExportWithSubtitles: (params: any): Promise<string> =>
+    ipcRenderer.invoke('video:trimExportWithSubtitles', params),
+
   // Video conversion
   convertVideo: (params: ConvertVideoParams): Promise<string> =>
     ipcRenderer.invoke('video:convert', params),
@@ -142,6 +146,23 @@ const api = {
     const handler = (_event: any, data: any) => callback(data)
     ipcRenderer.on('timeline:export-error', handler)
     return () => ipcRenderer.removeListener('timeline:export-error', handler)
+  },
+
+  // Subtitle generation (Phase 3)
+  generateSubtitles: (params: {
+    clipPath: string
+    trimStart: number
+    trimEnd: number
+    apiKey: string
+  }): Promise<any> => ipcRenderer.invoke('clip:generateSubtitles', params),
+
+  // Subtitle progress listener
+  onSubtitleProgress: (
+    callback: (data: { progress: number; phase: string }) => void
+  ): (() => void) => {
+    const handler = (_event: any, data: { progress: number; phase: string }) => callback(data)
+    ipcRenderer.on('subtitle:progress', handler)
+    return () => ipcRenderer.removeListener('subtitle:progress', handler)
   }
 }
 

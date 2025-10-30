@@ -8,6 +8,7 @@
 import { BrowserWindow } from 'electron'
 import { registerVideoHandlers } from './videoHandlers'
 import { registerExportHandlers } from './exportHandlers'
+import { registerSubtitleHandlers } from './subtitleHandlers'
 import './recordingHandlers' // Import to register handlers
 
 /**
@@ -16,8 +17,9 @@ import './recordingHandlers' // Import to register handlers
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   registerVideoHandlers(mainWindow)
   registerExportHandlers()
+  registerSubtitleHandlers()
   // Recording handlers are already registered via ipcMain.handle() calls in recordingHandlers.ts
-  console.log('Recording IPC handlers registered')
+  console.log('All IPC handlers registered (video, export, subtitles, recording)')
 }
 
 /**

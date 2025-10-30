@@ -8,7 +8,7 @@
  * This module is reserved for future export-specific handlers.
  */
 
-import { ipcMain, IpcMainEvent } from 'electron'
+import { ipcMain, IpcMainInvokeEvent } from 'electron'
 import { exportTimeline, ExportProgress, TimelineExportParams } from '../ffmpeg/concat'
 
 export interface ExportParams {
@@ -36,32 +36,35 @@ export interface TimelineExportRequest {
  */
 export function registerExportHandlers(): void {
   // Handler for multi-clip timeline export
-  ipcMain.handle('timeline:export', async (event: IpcMainEvent, request: TimelineExportRequest) => {
-    try {
-      const params: TimelineExportParams & { clips: any[] } = {
-        videoClips: request.videoClips,
-        audioClips: request.audioClips,
-        isMuted: request.isMuted,
-        outputPath: request.outputPath,
-        quality: request.quality,
-        clips: request.clips
-      }
+  ipcMain.handle(
+    'timeline:export',
+    async (event: IpcMainInvokeEvent, request: TimelineExportRequest) => {
+      try {
+        const params: TimelineExportParams & { clips: any[] } = {
+          videoClips: request.videoClips,
+          audioClips: request.audioClips,
+          isMuted: request.isMuted,
+          outputPath: request.outputPath,
+          quality: request.quality,
+          clips: request.clips
+        }
 
-      // Export with progress tracking
-      return await exportTimeline(params, (progress: ExportProgress) => {
-        // Send progress updates back to renderer
-        event.sender.send('timeline:export-progress', {
-          progress: progress.progress,
-          phase: progress.phase,
-          totalPhases: progress.totalPhases
+        // Export with progress tracking
+        return await exportTimeline(params, (progress: ExportProgress) => {
+          // Send progress updates back to renderer
+          event.sender.send('timeline:export-progress', {
+            progress: progress.progress,
+            phase: progress.phase,
+            totalPhases: progress.totalPhases
+          })
         })
-      })
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown export error'
-      event.sender.send('timeline:export-error', { error: errorMessage })
-      throw error
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown export error'
+        event.sender.send('timeline:export-error', { error: errorMessage })
+        throw error
+      }
     }
-  })
+  )
 
   console.log('Timeline export IPC handler registered')
 }

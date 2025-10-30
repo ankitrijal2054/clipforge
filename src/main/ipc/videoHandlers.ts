@@ -1,7 +1,17 @@
 import { ipcMain, IpcMainInvokeEvent, dialog, BrowserWindow } from 'electron'
-import { getVideoMetadata, getVideoThumbnail } from '../ffmpeg/metadata'
-import { trimAndExport, convertVideo, ExportProgress } from '../ffmpeg/operations'
-import { VideoMetadata } from '../../types/video'
+import {
+  getVideoMetadata,
+  getVideoThumbnail,
+  trimAndExport,
+  convertVideo,
+  type ExportProgress
+} from '../ffmpeg'
+import type { VideoMetadata, VideoThumbnailParams } from '../../types/video'
+import { burnSubtitlesIntoVideo } from '../ffmpeg/subtitleBurn'
+import type { Subtitle } from '../../types/subtitles'
+import path from 'path'
+import fs from 'fs'
+import os from 'os'
 
 /**
  * IPC handlers for video operations
@@ -9,12 +19,6 @@ import { VideoMetadata } from '../../types/video'
 
 export interface VideoMetadataParams {
   filePath: string
-}
-
-export interface VideoThumbnailParams {
-  filePath: string
-  timeInSeconds: number
-  outputPath: string
 }
 
 export interface TrimExportParams {
@@ -82,6 +86,77 @@ export function registerVideoHandlers(mainWindow: BrowserWindow): void {
       } catch (error) {
         throw new Error(
           `Failed to trim and export video: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      }
+    }
+  )
+
+  // Trim and export video with subtitle burning
+  ipcMain.handle(
+    'video:trimExportWithSubtitles',
+    async (
+      event: IpcMainInvokeEvent,
+      params: TrimExportParams & {
+        subtitles: Subtitle[]
+        subtitleSettings: {
+          textColor: string
+          fontSize: number
+          position: 'top' | 'center' | 'bottom'
+        }
+      }
+    ): Promise<string> => {
+      try {
+        // Step 1: Trim and export without subtitles first
+        const trimmedVideoPath = await trimAndExport(params, (progress: ExportProgress) => {
+          event.sender.send('video:exportProgress', {
+            progress: Math.floor(progress.progress * 0.5), // First 50% for trimming
+            currentTime: progress.currentTime,
+            totalTime: progress.totalTime,
+            speed: progress.speed
+          })
+        })
+
+        // Step 2: Burn subtitles into the trimmed video
+        const tempDir = path.join(os.tmpdir(), 'clipforge', 'subtitle-export')
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true })
+        }
+
+        const finalOutputPath = params.outputPath
+        const tempOutputPath = path.join(tempDir, `temp_${Date.now()}.mp4`)
+
+        event.sender.send('video:exportProgress', {
+          progress: 75,
+          currentTime: 0,
+          totalTime: 100,
+          speed: 1
+        })
+
+        await burnSubtitlesIntoVideo(
+          trimmedVideoPath,
+          params.subtitles,
+          tempOutputPath,
+          params.subtitleSettings
+        )
+
+        // Step 3: Move the subtitle-burned video to final output path
+        fs.copyFileSync(tempOutputPath, finalOutputPath)
+
+        // Clean up temp files
+        fs.unlinkSync(trimmedVideoPath)
+        fs.unlinkSync(tempOutputPath)
+
+        event.sender.send('video:exportProgress', {
+          progress: 100,
+          currentTime: 100,
+          totalTime: 100,
+          speed: 1
+        })
+
+        return finalOutputPath
+      } catch (error) {
+        throw new Error(
+          `Failed to trim, export and burn subtitles: ${error instanceof Error ? error.message : 'Unknown error'}`
         )
       }
     }
@@ -201,6 +276,7 @@ export function unregisterVideoHandlers(): void {
   ipcMain.removeAllListeners('video:getMetadata')
   ipcMain.removeAllListeners('video:getThumbnail')
   ipcMain.removeAllListeners('video:trimExport')
+  ipcMain.removeAllListeners('video:trimExportWithSubtitles')
   ipcMain.removeAllListeners('video:convert')
   ipcMain.removeAllListeners('dialog:selectVideo')
   ipcMain.removeAllListeners('dialog:selectExportPath')

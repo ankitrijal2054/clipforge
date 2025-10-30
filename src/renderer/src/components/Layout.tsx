@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Download, Mic, X } from 'lucide-react'
+import { Download, Mic, X, Key, Zap } from 'lucide-react'
 import { useState } from 'react'
 import { ImportManager } from './ImportManager'
 import { MediaLibrary } from './MediaLibrary'
@@ -7,8 +7,12 @@ import { RecordingPanel } from './recording/RecordingPanel'
 import { PreviewPlayer } from './PreviewPlayer'
 import { Timeline } from './Timeline'
 import { ExportModal } from '../../../components/ExportModal'
+import { AISettings } from './AISettings'
+import { SubtitlesPanel } from './SubtitlesPanel'
 import { Button } from '../../../components/ui/button'
 import { useEditorStore } from '../../../stores/editorStore'
+
+type RightPanelTab = 'record' | 'ai-settings' | 'subtitles'
 
 /**
  * Layout component for the main application interface
@@ -16,8 +20,7 @@ import { useEditorStore } from '../../../stores/editorStore'
  * Features:
  * - Left sidebar: Import Manager and Media Library
  * - Main content area: Video Preview and Timeline
- * - Right sidebar: Collapsible Recording section (hidden by default)
- * - Modern ribbon toggle button for quick record access
+ * - Right sidebar: Tabbed panels (Quick Record, AI Settings, Subtitles)
  * - Responsive layout ensuring nothing goes out of bounds
  */
 export function Layout(): React.ReactElement {
@@ -25,7 +28,8 @@ export function Layout(): React.ReactElement {
   const timelineVideoClips = useEditorStore((state) => state.timelineVideoClips)
   const setActiveModal = useEditorStore((state) => state.setActiveModal)
   const [isPreviewFullscreen, setIsPreviewFullscreen] = useState(false)
-  const [isQuickRecordOpen, setIsQuickRecordOpen] = useState(false)
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<RightPanelTab>('record')
 
   return (
     <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
@@ -185,35 +189,86 @@ export function Layout(): React.ReactElement {
         )}
       </div>
 
-      {/* RIGHT SIDEBAR - Collapsible Recording Section */}
-      {!isPreviewFullscreen && isQuickRecordOpen && (
+      {/* RIGHT SIDEBAR - Tabbed Panels (Record, AI Settings, Subtitles) */}
+      {!isPreviewFullscreen && isRightPanelOpen && (
         <motion.div
           className="w-64 bg-gray-800/95 backdrop-blur-sm border-l border-gray-700 flex flex-col shadow-xl overflow-hidden"
           initial={{ x: 256 }}
           animate={{ x: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
-          <div className="flex items-center justify-between p-3 border-b border-gray-700 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <Mic size={18} className="text-red-400" />
-              <span className="text-sm font-semibold">Quick Record</span>
+          {/* Tab Header */}
+          <div className="flex items-center justify-between p-2 border-b border-gray-700 flex-shrink-0">
+            <div className="flex gap-1">
+              {/* Record Tab */}
+              <button
+                onClick={() => setActiveTab('record')}
+                className={`px-2.5 py-1.5 rounded-t text-xs font-medium transition-all flex items-center gap-1 ${
+                  activeTab === 'record'
+                    ? 'bg-red-500/20 border-b-2 border-red-500 text-red-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+                title="Quick Record"
+              >
+                <Mic size={14} />
+                Record
+              </button>
+
+              {/* AI Settings Tab */}
+              <button
+                onClick={() => setActiveTab('ai-settings')}
+                className={`px-2.5 py-1.5 rounded-t text-xs font-medium transition-all flex items-center gap-1 ${
+                  activeTab === 'ai-settings'
+                    ? 'bg-blue-500/20 border-b-2 border-blue-500 text-blue-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+                title="AI Settings"
+              >
+                <Key size={14} />
+                AI
+              </button>
+
+              {/* Subtitles Tab */}
+              <button
+                onClick={() => setActiveTab('subtitles')}
+                className={`px-2.5 py-1.5 rounded-t text-xs font-medium transition-all flex items-center gap-1 ${
+                  activeTab === 'subtitles'
+                    ? 'bg-yellow-500/20 border-b-2 border-yellow-500 text-yellow-400'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+                title="Generate Subtitles"
+              >
+                <Zap size={14} />
+                Subs
+              </button>
             </div>
+
+            {/* Close Button */}
             <button
-              onClick={() => setIsQuickRecordOpen(false)}
+              onClick={() => setIsRightPanelOpen(false)}
               className="p-1 hover:bg-gray-700 rounded transition-colors"
-              title="Close quick record"
+              title="Close panel"
             >
               <X size={16} className="text-gray-400 hover:text-white" />
             </button>
           </div>
-          <RecordingPanel />
+
+          {/* Tab Content */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {activeTab === 'record' && <RecordingPanel />}
+            {activeTab === 'ai-settings' && <AISettings />}
+            {activeTab === 'subtitles' && <SubtitlesPanel />}
+          </div>
         </motion.div>
       )}
 
-      {/* QUICK RECORD TOGGLE BUTTON - Modern Ribbon Style */}
-      {!isPreviewFullscreen && !isQuickRecordOpen && (
+      {/* PANEL TOGGLE BUTTON - Modern Ribbon Style */}
+      {!isPreviewFullscreen && !isRightPanelOpen && (
         <motion.button
-          onClick={() => setIsQuickRecordOpen(true)}
+          onClick={() => {
+            setIsRightPanelOpen(true)
+            setActiveTab('record')
+          }}
           className="fixed top-4 right-4 z-40 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 font-medium text-sm"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}

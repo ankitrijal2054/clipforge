@@ -3,6 +3,7 @@ import { devtools, persist } from 'zustand/middleware'
 import { EditorStore } from '../types/store'
 import { VideoClip, ExportSettings } from '../types/video'
 import { TimelineClip } from '../types/timeline'
+import { Subtitle } from '../types/subtitles'
 import { createPersistenceStorage } from './persistence'
 
 /**
@@ -90,6 +91,17 @@ export const useEditorStore = create<EditorStore>()(
         timelineIsExporting: false,
         timelineExportProgress: 0,
         timelineExportError: null as string | null,
+
+        // Subtitles (Phase 3)
+        currentSubtitles: null,
+        isGeneratingSubtitles: false,
+        subtitleGenerationProgress: 0,
+        subtitleGenerationPhase: '',
+        subtitleError: null as string | null,
+        burnSubtitles: false,
+        subtitleTextColor: '#FFFFFF',
+        subtitleFontSize: 32,
+        subtitlePosition: 'bottom' as const,
 
         // Media management actions
         addClip: (clip: VideoClip) =>
@@ -396,6 +408,48 @@ export const useEditorStore = create<EditorStore>()(
         setTimelineExportError: (error: string | null) =>
           set(() => ({
             timelineExportError: error
+          })),
+
+        // Subtitle actions (Phase 3)
+        setSubtitles: (subtitles: Subtitle[] | null) =>
+          set(() => ({
+            currentSubtitles: subtitles
+          })),
+
+        setGeneratingSubtitles: (isGenerating: boolean) =>
+          set(() => ({
+            isGeneratingSubtitles: isGenerating
+          })),
+
+        setSubtitleProgress: (progress: number, phase: string) =>
+          set(() => ({
+            subtitleGenerationProgress: Math.max(0, Math.min(100, progress)),
+            subtitleGenerationPhase: phase
+          })),
+
+        setSubtitleError: (error: string | null) =>
+          set(() => ({
+            subtitleError: error
+          })),
+
+        setBurnSubtitles: (burn: boolean) =>
+          set(() => ({
+            burnSubtitles: burn
+          })),
+
+        setSubtitleSettings: (settings) =>
+          set((state) => ({
+            subtitleTextColor: settings.textColor ?? state.subtitleTextColor,
+            subtitleFontSize: settings.fontSize ?? state.subtitleFontSize,
+            subtitlePosition: settings.position ?? state.subtitlePosition
+          })),
+
+        clearSubtitles: () =>
+          set(() => ({
+            currentSubtitles: null,
+            subtitleError: null,
+            subtitleGenerationProgress: 0,
+            subtitleGenerationPhase: ''
           })),
 
         // Trim actions
