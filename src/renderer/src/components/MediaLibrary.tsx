@@ -67,7 +67,7 @@ export function MediaLibrary() {
                 : 'bg-gray-800 hover:bg-gray-700 border border-transparent hover:border-gray-600'
             }`}
             onClick={() => handleSelectClip(clip.id)}
-            onDragStart={(e) => {
+            onDragStart={(e: any) => {
               // Set drag data for timeline drop zones
               e.dataTransfer.effectAllowed = 'copy'
               e.dataTransfer.setData('application/json', JSON.stringify(clip))

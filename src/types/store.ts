@@ -1,5 +1,6 @@
 import { VideoClip, ExportSettings } from './video'
 import { TimelineClip, TimelineState } from './timeline'
+import { Subtitle } from './subtitles'
 
 export interface EditorStore extends TimelineState {
   // Media
@@ -41,6 +42,17 @@ export interface EditorStore extends TimelineState {
   timelineIsExporting: boolean
   timelineExportProgress: number
   timelineExportError: string | null
+
+  // Subtitles (Phase 3)
+  currentSubtitles: Subtitle[] | null
+  isGeneratingSubtitles: boolean
+  subtitleGenerationProgress: number
+  subtitleGenerationPhase: string
+  subtitleError: string | null
+  burnSubtitles: boolean
+  subtitleTextColor: string
+  subtitleFontSize: number
+  subtitlePosition: 'top' | 'center' | 'bottom'
 
   // UI State
   activeModal: string | null
@@ -86,6 +98,21 @@ export interface EditorStore extends TimelineState {
   setTimelineExporting: (isExporting: boolean) => void
   setTimelineExportProgress: (progress: number) => void
   setTimelineExportError: (error: string | null) => void
+
+  // Subtitle actions (Phase 3)
+  setSubtitles: (subtitles: Subtitle[] | null) => void
+  setGeneratingSubtitles: (isGenerating: boolean) => void
+  setSubtitleProgress: (progress: number, phase: string) => void
+  setSubtitleError: (error: string | null) => void
+  setBurnSubtitles: (burn: boolean) => void
+  setSubtitleSettings: (
+    settings: Partial<{
+      textColor: string
+      fontSize: number
+      position: 'top' | 'center' | 'bottom'
+    }>
+  ) => void
+  clearSubtitles: () => void
 
   // UI
   setActiveModal: (modal: string | null) => void

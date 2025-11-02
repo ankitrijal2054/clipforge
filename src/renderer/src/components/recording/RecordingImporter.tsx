@@ -86,7 +86,7 @@ export const RecordingImporter: React.FC = () => {
     async (video: RecordedVideo) => {
       setImportingPath(video.path)
       try {
-        const result = await importRecording(video.path, true)
+        const result = await importRecording(video.path)
         if (result) {
           // Recording imported successfully
           // Note: We intentionally keep it in the recent list

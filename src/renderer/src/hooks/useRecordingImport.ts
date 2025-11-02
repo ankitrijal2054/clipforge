@@ -23,7 +23,7 @@ export function useRecordingImport(options: UseRecordingImportOptions = {}) {
    * Automatically adds it to the store and optionally to the timeline
    */
   const importRecording = useCallback(
-    async (filePath: string, autoAddToTimeline = true) => {
+    async (filePath: string) => {
       try {
         setIsImporting(true)
         setError(null)

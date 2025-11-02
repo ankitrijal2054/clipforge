@@ -51,7 +51,14 @@ export function ExportModal(): React.JSX.Element | null {
     clips: libraryClips,
     trimStart,
     trimEnd,
-    timelineExportProgress
+    timelineExportProgress,
+    currentSubtitles,
+    burnSubtitles,
+    subtitleTextColor,
+    subtitleFontSize,
+    subtitlePosition,
+    setBurnSubtitles,
+    setSubtitleSettings
   } = useEditorStore()
 
   // Local modal state
@@ -63,6 +70,7 @@ export function ExportModal(): React.JSX.Element | null {
   // Detect export mode: timeline if any clips on timeline, otherwise single-clip
   const hasTimelineClips = timelineVideoClips.length > 0 || timelineAudioClips.length > 0
   const exportMode: ExportMode = hasTimelineClips ? 'timeline' : 'single-clip'
+  const hasSubtitles = currentSubtitles && currentSubtitles.length > 0
 
   // Auto-populate filename based on mode
   useEffect(() => {
@@ -156,14 +164,31 @@ export function ExportModal(): React.JSX.Element | null {
 
     const trimmedDuration = trimEnd - trimStart
 
-    // Call the actual FFmpeg export via IPC
-    await window.api.trimExport({
-      inputPath: selectedClip.path,
-      startTime: trimStart,
-      endTime: trimEnd,
-      outputPath: exportPath,
-      duration: trimmedDuration
-    })
+    if (burnSubtitles && hasSubtitles) {
+      // Export with subtitle burning
+      await (window.api as any).trimExportWithSubtitles({
+        inputPath: selectedClip.path,
+        startTime: trimStart,
+        endTime: trimEnd,
+        outputPath: exportPath,
+        duration: trimmedDuration,
+        subtitles: currentSubtitles,
+        subtitleSettings: {
+          textColor: subtitleTextColor,
+          fontSize: subtitleFontSize,
+          position: subtitlePosition
+        }
+      })
+    } else {
+      // Regular export without subtitles
+      await window.api.trimExport({
+        inputPath: selectedClip.path,
+        startTime: trimStart,
+        endTime: trimEnd,
+        outputPath: exportPath,
+        duration: trimmedDuration
+      })
+    }
   }
 
   /**
@@ -310,6 +335,83 @@ export function ExportModal(): React.JSX.Element | null {
                 </Button>
               </div>
             </div>
+
+            {/* Burn Subtitles Option - only show if subtitles exist */}
+            {hasSubtitles && exportMode === 'single-clip' && (
+              <div className="space-y-3 p-3 bg-gray-800/50 rounded-lg border border-gray-700">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="burn-subtitles"
+                    checked={burnSubtitles}
+                    onChange={(e) => setBurnSubtitles(e.target.checked)}
+                    disabled={isExporting || exportStatus === 'exporting'}
+                    className="w-4 h-4 rounded cursor-pointer"
+                  />
+                  <label
+                    htmlFor="burn-subtitles"
+                    className="text-sm font-medium text-gray-300 cursor-pointer"
+                  >
+                    Burn Subtitles into Video
+                  </label>
+                </div>
+
+                {burnSubtitles && (
+                  <div className="space-y-2 ml-6">
+                    {/* Font Size */}
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">
+                        Font Size: {subtitleFontSize}
+                      </label>
+                      <input
+                        type="range"
+                        min="16"
+                        max="48"
+                        value={subtitleFontSize}
+                        onChange={(e) =>
+                          setSubtitleSettings({ fontSize: parseInt(e.target.value) })
+                        }
+                        disabled={isExporting || exportStatus === 'exporting'}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Text Color */}
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Text Color</label>
+                      <input
+                        type="color"
+                        value={subtitleTextColor}
+                        onChange={(e) => setSubtitleSettings({ textColor: e.target.value })}
+                        disabled={isExporting || exportStatus === 'exporting'}
+                        className="w-10 h-8 rounded cursor-pointer border border-gray-600"
+                      />
+                    </div>
+
+                    {/* Position */}
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1 block">Position</label>
+                      <div className="flex gap-2">
+                        {(['top', 'center', 'bottom'] as const).map((pos) => (
+                          <button
+                            key={pos}
+                            onClick={() => setSubtitleSettings({ position: pos })}
+                            disabled={isExporting || exportStatus === 'exporting'}
+                            className={`flex-1 px-2.5 py-1.5 text-xs rounded border transition-all ${
+                              subtitlePosition === pos
+                                ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400'
+                                : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500'
+                            }`}
+                          >
+                            {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Progress Bar - shown during export */}
             {exportStatus === 'exporting' && (
