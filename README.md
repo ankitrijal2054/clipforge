@@ -13,16 +13,30 @@ ClipForge is a modern, cross-platform desktop video editor built with Electron, 
 - **Multi-Format Support**: MP4, MOV, WebM, AVI, MKV, and more
 - **Media Library**: Organized view of all imported videos
 
+### 🎙️ **Native Recording**
+
+- **Screen Recording**: Capture your entire screen or specific windows
+- **Webcam Recording**: Record with your camera
+- **Picture-in-Picture**: Combine screen and webcam in one recording
+- **Quality Presets**: Choose from high/medium/low quality settings
+- **Auto-Import**: Recordings automatically available in your library
+- **Device Selection**: Choose audio/video input devices
+
 ### 🎬 **Professional Video Editing**
 
 - **Real-time Preview**: High-quality video playback with controls
 - **Precise Trimming**: Frame-accurate start/end point selection
-- **Timeline Interface**: Visual timeline with scrubber for easy navigation
+- **Multi-Clip Timeline**: Professional 2-track timeline (video + audio)
+- **Drag & Drop Editing**: Arrange clips on timeline with drag-and-drop
+- **Clip Operations**: Split, trim, delete, and arrange multiple clips
+- **Timeline Playback**: Seamless preview across all timeline clips
 - **Keyboard Shortcuts**: Efficient editing with hotkeys
 
 ### 🚀 **Export & Processing**
 
 - **Multiple Export Formats**: MP4, MOV, WebM, AVI, MKV
+- **Multi-Clip Export**: Concatenate timeline clips with original quality
+- **External Audio Support**: Overlay audio tracks with precise synchronization
 - **Quality Settings**: Customizable resolution and bitrate
 - **Progress Tracking**: Real-time export progress with cancellation
 - **FFmpeg Integration**: Professional video processing engine
@@ -191,21 +205,32 @@ clipforge/
 - Validates file formats and provides user feedback
 - Manages the media library state
 
+### **RecordingPanel** (Phase 2)
+
+- Native screen, webcam, and Picture-in-Picture recording
+- Device selection and quality presets
+- Real-time recording status and controls
+- Auto-import recorded videos to library
+
 ### **PreviewPlayer**
 
 - Real-time video playback with controls
 - Frame-accurate scrubbing and navigation
 - Keyboard shortcut support
+- Supports both single-clip and multi-clip timeline playback
 
-### **Timeline**
+### **Timeline** (Phase 2)
 
-- Visual timeline interface for trimming
-- Start/end point selection
-- Precise frame control
+- Multi-clip timeline with 2 tracks (video + audio)
+- Drag-and-drop clip arrangement
+- Clip operations: split, trim, delete, reorder
+- Zoom and pan controls for precise editing
+- Visual feedback and selection states
 
 ### **ExportModal**
 
 - Export configuration and progress tracking
+- Single-clip and multi-clip export support
 - Multiple format and quality options
 - Real-time progress updates
 
